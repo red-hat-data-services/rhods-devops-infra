@@ -71,6 +71,14 @@ git:
   dest:
     url: https://github.com/red-hat-data-services/modelmesh-runtime-adapter.git
     branch: main
+- name: openvino_model_server
+  automerge: 'yes'
+  src:
+    url: https://github.com/opendatahub-io/openvino_model_server.git
+    branch: 2023.1-release
+  dest:
+    url: https://github.com/red-hat-data-services/openvino_model_server.git
+    branch: main
 - name: data-science-pipelines
   automerge: 'yes'
   src:
