@@ -78,7 +78,7 @@ git:
     branch: 2023.1-release
   dest:
     url: https://github.com/red-hat-data-services/openvino_model_server.git
-    branch: main
+    branch: 2023.1-release
 - name: data-science-pipelines
   automerge: 'yes'
   src:
