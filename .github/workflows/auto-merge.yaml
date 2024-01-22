@@ -87,7 +87,7 @@ jobs:
         uses: dchourasia/sync-upstream-repo@1.01
         with:
           upstream_repo: "${{ matrix.mapping.src.url }}"
-          upstream_branch: "${{ matrix.mapping.src.branch }}"
+          upstream_branch: "upstream/${{ matrix.mapping.src.branch }}"
           downstream_repo: "${{ matrix.mapping.dest.url }}"
-          downstream_branch: "${{ matrix.mapping.dest.branch }}"
+          downstream_branch: "origin/${{ matrix.mapping.dest.branch }}"
           token: ${{ steps.app-token.outputs.token }}
