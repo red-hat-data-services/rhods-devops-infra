@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Path to the file containing the repository URL
-REPO_URL_FILE="repo_url.txt"
+REPO_URL_FILE="Digest_verifier/repo_url.txt"
 
 # Check if the repository URL file exists
 if [ ! -f "$REPO_URL_FILE" ]; then
