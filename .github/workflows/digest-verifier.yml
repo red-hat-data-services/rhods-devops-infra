@@ -1,0 +1,24 @@
+name: Digest Verifier
+
+on:
+  schedule:
+    - cron: '30 4 * * *'  # Runs at 10 AM IST (4:30 AM UTC), defaults to the latest rhoai branch
+  workflow_dispatch:
+    inputs:
+      reference:
+        description: 'Branch Name'
+        required: false
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Execute script with branch parameter
+      env:
+        BRANCH_NAME: ${{ github.event.inputs.reference || 'latest' }}
+      run: |
+        chmod +x ./Digest_verifier/Digest-verifier.sh
+        ./Digest_verifier/Digest-verifier.sh $BRANCH_NAME

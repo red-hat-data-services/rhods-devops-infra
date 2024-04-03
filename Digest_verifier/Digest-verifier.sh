@@ -1,16 +1,7 @@
 #!/bin/bash
 
-# Check if a branch name was provided as an argument
-if [ $# -ne 1 ]; then
-  echo "Usage: $0 <branch-name>"
-  echo "Example: $0 main"
-  exit 1
-fi
-
-BRANCH_NAME="$1"
-
 # Path to the file containing the repository URL
-REPO_URL_FILE="Digest_verifier/repo_url.txt"
+REPO_URL_FILE="repo_url.txt"
 
 # Check if the repository URL file exists
 if [ ! -f "$REPO_URL_FILE" ]; then
@@ -20,6 +11,26 @@ fi
 
 # Read the repository URL from the file
 REPO_URL=$(cat "$REPO_URL_FILE")
+
+# Check if a branch name was provided as an argument
+if [ $# -eq 1 ]; then
+  BRANCH_NAME="$1"
+  if [ "$BRANCH_NAME" = "latest" ]; then
+    # Fetch the latest branch name matching 'rhoai' from the remote repository
+    BRANCH_NAME=$(git ls-remote --heads $REPO_URL | grep 'rhoai' | awk -F'/' '{print $NF}' | sort -V | tail -1)
+    if [ -z "$BRANCH_NAME" ]; then
+      echo "Error: Unable to determine the latest branch name."
+      exit 1
+    fi
+  fi
+else
+  # Default to the latest 'rhoai' branch if no argument is provided
+  BRANCH_NAME=$(git ls-remote --heads $REPO_URL | grep 'rhoai' | awk -F'/' '{print $NF}' | sort -V | tail -1)
+  if [ -z "$BRANCH_NAME" ]; then
+    echo "Error: Unable to determine the latest branch name."
+    exit 1
+  fi
+fi
 
 echo "Attempting to clone the branch '$BRANCH_NAME' from '$REPO_URL' into 'kserve' directory..."
 
@@ -31,6 +42,7 @@ if [ $? -ne 0 ]; then
 else
   echo "Successfully cloned the branch '$BRANCH_NAME'."
 fi
+
 
 # Define the path to the file you want to check in the cloned directory
 FILE_PATH="kserve/config/overlays/odh/params.env"
