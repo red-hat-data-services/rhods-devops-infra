@@ -59,9 +59,14 @@ full_path="kserve/$file_path"
 sha_mismatch_found=0
 
 # Function to check SHAs and print results
-extract_names_with_sbom_extension() {
+extract_names_with_att_extension() {
  local tag="$1"
  local repo_hash="$2"
+
+  if [ -z "$hash" ]; then
+    echo "Error: The $name image is referenced using floating tags. Exiting..."
+    exit 1
+ fi
 
  json_response=$(curl -s https://quay.io/api/v1/repository/modh/$tag/tag/ | jq -r '.tags | .[:3] | map(select(.name | endswith(".att"))) | .[].name')
  local quay_hash=$(echo "$json_response" | sed 's/^sha256-\(.*\)\.att$/\1/')
@@ -83,7 +88,7 @@ main() {
      while IFS= read -r line; do
          local name=$(echo "$line" | cut -d'=' -f1)
          local hash=$(echo "$line" | awk -F 'sha256:' '{print $2}')
-         extract_names_with_sbom_extension "$name" "$hash"
+         extract_names_with_att_extension "$name" "$hash"
      done <<< "$input"
  else
      echo "File not found: $full_path"
