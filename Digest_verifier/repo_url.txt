@@ -1,1 +1,1 @@
-https://github.com/red-hat-data-services/kserve.git
+https://github.com/red-hat-data-services/kserve.git;/config/overlays/odh/params.env
