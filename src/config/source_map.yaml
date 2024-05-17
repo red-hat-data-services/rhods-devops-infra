@@ -225,3 +225,11 @@ git:
   dest:
     url: https://github.com/red-hat-data-services/fms-hf-tuning.git
     branch: main
+- name: vllm
+  automerge: 'no'
+  src:
+    url: https://github.com/opendatahub-io/vllm.git
+    branch: release
+  dest:
+    url: https://github.com/red-hat-data-services/vllm.git
+    branch: main

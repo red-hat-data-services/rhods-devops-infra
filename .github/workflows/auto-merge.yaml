@@ -32,6 +32,7 @@ on:
           - caikit
           - kserve
           - caikit-tgis-backend
+          - vllm
   schedule:
     - cron: '0 0 * * *'
 
