@@ -70,7 +70,7 @@ jobs:
           fi
           echo "::set-output name=value::$value"
   build:
-    needs: [ setup,  ${{ matrix.mapping.needs }}]
+    needs: [ setup ]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
