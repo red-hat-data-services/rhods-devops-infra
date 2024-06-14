@@ -16,7 +16,7 @@ fetch_latest_branch() {
   local branch
   branch=$(git ls-remote --heads "$repo_url" | grep "$pattern" | awk -F'/' '{print $NF}' | sort -V | tail -1)
   if [ -z "$branch" ]; then
-    echo "No branch matching the pattern '$pattern' found."
+    echo "No branch matching the pattern '$pattern' found for repository: $repo_url"
     exit 1
   fi
   echo "$branch"
@@ -91,6 +91,11 @@ process_repo() {
   else
     echo "File not found: $full_path"
   fi
+
+  # Clean up cloned repository
+  rm -rf kserve
+
+  return $sha_mismatch_found
 }
 
 # Function to fetch and display Quay SHA for repositories without a file path
@@ -115,6 +120,9 @@ fetch_quay_sha() {
 # Initialize a variable to keep track of SHA mismatches
 sha_mismatch_found=0
 
+# Debug output to check configuration file path
+echo "Using configuration file: $config_file"
+
 # Read the repository URLs and paths from the file
 while IFS=';' read -r repo_url file_path; do
   # Determine the branch name based on input argument
@@ -128,11 +136,14 @@ while IFS=';' read -r repo_url file_path; do
     branch_name=$(fetch_latest_branch "$repo_url")
   fi
 
+  echo "Using branch: $branch_name"
+
   # Process each repository
   if [[ -z "$file_path" ]]; then
     fetch_quay_sha "$repo_url" "$branch_name"
   else
     process_repo "$repo_url" "$file_path" "$branch_name"
+    sha_mismatch_found=$((sha_mismatch_found + $?))
   fi
 done < "$config_file"
 
