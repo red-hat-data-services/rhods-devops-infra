@@ -28,6 +28,8 @@ extract_names_with_att_extension() {
   local repo_hash="$2"
   local pattern="$3"
 
+  echo "Checking image: $name with repo SHA: $repo_hash and pattern: $pattern"
+
   if [ -z "$repo_hash" ]; then
     echo "Error: The $name image is referenced using floating tags. Exiting..."
     sha_mismatch_found=1
@@ -117,6 +119,8 @@ sha_mismatch_found=0
 
 # Read the repository URLs and paths from the file
 while IFS=';' read -r repo_url file_path; do
+  echo "Processing repository: $repo_url with file path: $file_path"
+
   # Determine the branch name based on input argument
   if [ $# -eq 1 ]; then
     if [ "$1" = "latest" ]; then
@@ -127,6 +131,8 @@ while IFS=';' read -r repo_url file_path; do
   else
     branch_name=$(fetch_latest_branch "$repo_url")
   fi
+
+  echo "Using branch: $branch_name"
 
   # Process each repository
   if [[ -z "$file_path" ]]; then
