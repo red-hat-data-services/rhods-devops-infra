@@ -35,6 +35,13 @@ on:
           - kserve
           - caikit-tgis-backend
           - vllm
+  workflow_call:
+    inputs:
+      repositories:
+        required: true
+        type: string
+        description: Repository to sync, chosen from the list
+
   schedule:
     - cron: '0 */6 * * *'
 
