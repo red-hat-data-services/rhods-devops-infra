@@ -1,2 +1,2 @@
 https://github.com/red-hat-data-services/kserve.git;/config/overlays/odh/params.env
-https://github.com/red-hat-data-services/must-gather.git
+https://github.com/red-hat-data-services/must-gather.git;

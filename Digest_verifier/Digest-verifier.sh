@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# File containing the repository URL and the path
+# File containing the repository URLs and paths
 config_file="./Digest_verifier/repo_url.txt"
 
 # Check if the configuration file exists
