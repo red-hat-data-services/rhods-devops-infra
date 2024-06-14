@@ -8,7 +8,6 @@ on:
         description: select repositories
         options:
           - all
-          - optima
           - argo-workflows
           - codeflare-operator
           - data-science-pipelines
@@ -30,6 +29,7 @@ on:
           - training-operator
           - trustyai-explainability
           - trustyai-service-operator
+          - must-gather
   schedule:
     - cron: '0 1 * * *'
 

@@ -63,3 +63,6 @@ git:
 - name: training-operator
   automerge: 'yes'
   repo-url: https://github.com/red-hat-data-services/training-operator.git
+- name: must-gather
+  automerge: 'yes'
+  repo-url: https://github.com/red-hat-data-services/must-gather.git

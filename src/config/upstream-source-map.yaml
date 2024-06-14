@@ -1,20 +1,4 @@
 git:
-- name: opendatahub-operator
-  automerge: 'no'
-  src:
-    url: https://github.com/opendatahub-io/opendatahub-operator.git
-    branch: master
-  dest:
-    url: https://github.com/red-hat-data-services/opendatahub-operator.git
-    branch: master
-- name: odh-manifests
-  automerge: 'no'
-  src:
-    url: https://github.com/opendatahub-io/odh-manifests.git
-    branch: master
-  dest:
-    url: https://github.com/red-hat-data-services/odh-manifests.git
-    branch: master
 - name: odh-dashboard
   automerge: 'yes'
   src:
@@ -111,8 +95,18 @@ git:
   dest:
     url: https://github.com/red-hat-data-services/trustyai-service-operator.git
     branch: main
-- name: codeflare-operator
-  automerge: 'no'
+- name: codeflare-upstream
+  automerge: 'yes'
+  ignore-files: codeflare-stack/base/params.env
+  src:
+    url: https://github.com/project-codeflare/codeflare-operator.git
+    branch: main
+  dest:
+    url: https://github.com/opendatahub-io/codeflare-operator.git
+    branch: main
+- name: codeflare-downstream
+  automerge: 'yes'
+  ignore-files: codeflare-stack/base/params.env
   src:
     url: https://github.com/opendatahub-io/codeflare-operator.git
     branch: main
@@ -127,7 +121,7 @@ git:
   dest:
     url: https://github.com/red-hat-data-services/distributed-workloads.git
     branch: main
-  ignore: codeflare-stack/base/params.env
+  ignore-files: codeflare-stack/base/params.env
 - name: kuberay
   automerge: 'no'
   src:
@@ -200,7 +194,7 @@ git:
   dest:
     url: https://github.com/red-hat-data-services/kserve.git
     branch: master
-  ignore: config/overlays/odh/params.env
+  ignore-files: config/overlays/odh/params.env
 - name: rhods-operator
   automerge: 'no'
   src:
@@ -234,7 +228,7 @@ git:
     url: https://github.com/red-hat-data-services/fms-hf-tuning.git
     branch: release
 - name: vllm
-  automerge: 'no'
+  automerge: 'yes'
   src:
     url: https://github.com/opendatahub-io/vllm.git
     branch: release
