@@ -15,7 +15,7 @@ class jira_manager:
 
         column_object = {}
         column_object['columnId'] = column_map['Task Name']
-        column_object['value'] = f'{release_version} RC{rc_number}'
+        column_object['value'] = f'{release_version} RC{rc_number} available for QE'
         cells.append(column_object)
 
         column_object = {}
