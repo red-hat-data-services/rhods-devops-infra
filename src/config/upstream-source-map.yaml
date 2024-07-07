@@ -107,6 +107,7 @@ git:
     branch: main
 - name: codeflare-downstream
   automerge: 'yes'
+  run-after: codeflare-upstream
   src:
     url: https://github.com/opendatahub-io/codeflare-operator.git
     branch: main
