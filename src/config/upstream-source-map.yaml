@@ -1,6 +1,6 @@
 git:
 - name: odh-dashboard
-  automerge: 'no'
+  automerge: 'yes'
   src:
     url: https://github.com/opendatahub-io/odh-dashboard.git
     branch: main
@@ -25,6 +25,7 @@ git:
     branch: main
 - name: odh-model-controller
   automerge: 'yes'
+  ignore-files: config/base/params.env 
   src:
     url: https://github.com/opendatahub-io/odh-model-controller.git
     branch: release-0.12.0
@@ -97,7 +98,7 @@ git:
     branch: main
 - name: codeflare-upstream
   automerge: 'yes'
-  ignore-files: codeflare-stack/base/params.env
+  ignore-files: .github/workflows/e2e_tests.yaml
   src:
     url: https://github.com/project-codeflare/codeflare-operator.git
     branch: main
@@ -106,7 +107,6 @@ git:
     branch: main
 - name: codeflare-downstream
   automerge: 'yes'
-  ignore-files: codeflare-stack/base/params.env
   src:
     url: https://github.com/opendatahub-io/codeflare-operator.git
     branch: main
@@ -146,6 +146,14 @@ git:
   dest:
     url: https://github.com/red-hat-data-services/caikit-tgis-serving.git
     branch: main
+- name: caikit-upstream
+  automerge: 'yes'
+  src:
+    url: https://github.com/caikit/caikit.git
+    branch: main
+  dest:
+    url: https://github.com/opendatahub-io/caikit.git
+    branch: main
 - name: caikit
   automerge: 'yes'
   src:
@@ -154,6 +162,14 @@ git:
   dest:
     url: https://github.com/red-hat-data-services/caikit.git
     branch: main
+- name: caikit-nlp-upstream
+  automerge: 'yes'
+  src:
+    url: https://github.com/caikit/caikit-nlp.git
+    branch: main
+  dest:
+    url: https://github.com/opendatahub-io/caikit-nlp.git
+    branch: main
 - name: caikit-nlp
   automerge: 'yes'
   src:
@@ -161,6 +177,14 @@ git:
     branch: main
   dest:
     url: https://github.com/red-hat-data-services/caikit-nlp.git
+    branch: main
+- name: caikit-tgis-backend-upstream
+  automerge: 'yes'
+  src:
+    url: https://github.com/caikit/caikit-tgis-backend.git
+    branch: main
+  dest:
+    url: https://github.com/opendatahub-io/caikit-tgis-backend.git
     branch: main
 - name: caikit-tgis-backend
   automerge: 'yes'
