@@ -30,6 +30,7 @@ on:
           - odh-manifests
           - odh-model-controller
           - opendatahub-operator
+          - openvino_model_server
           - rest-proxy
           - rhods-operator
           - text-generation-inference

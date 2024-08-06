@@ -24,6 +24,7 @@ on:
           - notebooks
           - odh-dashboard
           - odh-model-controller
+          - openvino_model_server
           - rest-proxy
           - rhods-operator
           - training-operator
