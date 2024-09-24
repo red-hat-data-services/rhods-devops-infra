@@ -25,6 +25,8 @@ on:
           - modelmesh
           - modelmesh-runtime-adapter
           - modelmesh-serving
+          - model-registry
+          - model-registry-operator
           - multi-cluster-app-dispatcher
           - odh-dashboard
           - odh-manifests
