@@ -163,7 +163,7 @@ git:
     url: https://github.com/red-hat-data-services/caikit-nlp.git
     branch: main
 - name: model-registry
-  automerge: 'yes'
+  automerge: 'no'
   src:
     url: https://github.com/opendatahub-io/model-registry.git
     branch: main
@@ -171,7 +171,7 @@ git:
     url: https://github.com/red-hat-data-services/model-registry.git
     branch: main
 - name: model-registry-operator
-  automerge: 'yes'
+  automerge: 'no'
   src:
     url: https://github.com/opendatahub-io/model-registry-operator.git
     branch: main
