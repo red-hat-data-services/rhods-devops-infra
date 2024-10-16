@@ -1,0 +1,12 @@
+name: Stop Auto-Merge
+
+on: workflow_dispatch
+
+jobs:
+  stop-auto-merge:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install dependencies
+      run: |
+        pip install -r utils/auto-merge/requirements.txt
