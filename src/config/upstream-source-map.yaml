@@ -66,14 +66,13 @@ git:
     branch: master
 - name: data-science-pipelines
   automerge: 'yes'
+  ignore-files: .github/renovate.json5
   src:
     url: https://github.com/opendatahub-io/data-science-pipelines.git
     branch: stable
   dest:
     url: https://github.com/red-hat-data-services/data-science-pipelines.git
     branch: master
-    ignore-files:
-      - renovate.json5
 - name: data-science-pipelines-operator
   automerge: 'yes'
   src:
