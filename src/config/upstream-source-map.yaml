@@ -69,11 +69,11 @@ git:
   src:
     url: https://github.com/opendatahub-io/data-science-pipelines.git
     branch: stable
-    ignore-files:
-      - renovate.json5
   dest:
     url: https://github.com/red-hat-data-services/data-science-pipelines.git
     branch: master
+    ignore-files:
+      - renovate.json5
 - name: data-science-pipelines-operator
   automerge: 'yes'
   src:
