@@ -83,6 +83,7 @@ git:
     branch: main
 - name: argo-workflows
   automerge: 'yes'
+  ignore-files: renovate.json
   src:
     url: https://github.com/opendatahub-io/argo-workflows.git
     branch: stable
