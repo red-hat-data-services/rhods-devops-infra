@@ -65,7 +65,3 @@ jobs:
           workflow-inputs: '{"pr_id": "${{ github.event.pull_request.number }}", "repo": "${{ github.event.repository.name }}"}'
           ref: 'main'
           
-      - name: Echo Run ID and Run URL
-        run: |
-          echo "Triggered workflow run-id = ${{ steps.trigger-another-workflow.outputs.run-id }}"
-          echo "Triggered workflow run-url = ${{ steps.trigger-another-workflow.outputs.run-url }}"
