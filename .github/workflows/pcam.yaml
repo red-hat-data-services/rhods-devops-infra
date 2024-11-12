@@ -52,7 +52,7 @@ jobs:
             echo "PR author is '$pr_author'. Proceeding."
           fi
 
-      # Step 3: Trigger the other workflow in the test-automerger repository
+      # Step 3: Trigger the other workflow in the automation repository
       - uses: lasith-kg/dispatch-workflow@v2.0.0
         id: trigger-another-workflow
         name: Trigger another workflow to process PR
