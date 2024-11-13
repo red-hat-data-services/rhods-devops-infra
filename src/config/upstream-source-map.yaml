@@ -8,13 +8,13 @@ git:
     url: https://github.com/red-hat-data-services/odh-dashboard.git
     branch: main
 - name: kubeflow
-  automerge: 'no'
+  automerge: 'yes'
   src:
     url: https://github.com/opendatahub-io/kubeflow.git
-    branch: v1.6-branch
+    branch: main
   dest:
     url: https://github.com/red-hat-data-services/kubeflow.git
-    branch: main
+    branch: master
 - name: modelmesh-serving
   automerge: 'yes'
   src:
