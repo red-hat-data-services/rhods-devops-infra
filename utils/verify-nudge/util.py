@@ -7,7 +7,6 @@ import yaml
 from distutils.version import LooseVersion
 
 
-
 def colored_print(text, color, isBold=False):
     """
     Prints a message in a specified color with optional bold formatting.
@@ -202,9 +201,9 @@ def parse_nudged_file(file_path):
         print()
         colored_print(e, "red")
         exit(1)
-    
 
-    
+
+
 def extract_nudge_details(config, nudged_filename, params_env):
     """
     Extracts component name, image name, and image SHA digest from a given environment parameter string.
@@ -225,29 +224,46 @@ def extract_nudge_details(config, nudged_filename, params_env):
                     and exit with a status code of 1.
     """
     # Initialize variables to empty strings
-    component_name = image = image_name = image_sha = ""
+    component_name = image = image_name = image_sha = image_tag = ""
+
     try:
+        # Extract component name from params_env
         component_name = params_env.split('=')[0]
-        
-        if not config.get("verify-components") or component_name in config.get("verify-components"):
+        # Check if the component is in verify-components
+        verify_components = config.get("verify-components", [])
+        # Check if component is in verify-components, handling new dictionary structure
+        component_in_verify = any(
+            comp.get("name") == component_name for comp in verify_components
+        )
+        component_info = next((comp for comp in verify_components if comp.get("name") == component_name), None)
+
+        if not verify_components or component_in_verify:
+            # Extract image details if component exists
             image = params_env.split('=')[1]
-            # check if image is referenced by sha digest 
             if '@sha256' in image:
                 image_name = image.split('@')[0]
                 image_sha = image.split('@')[1]
             else:
                 raise Exception("Error: The Image reference doesn't have SHA Digest.")
+
+           
+            if component_info:
+                onboarded_since = component_info.get("onboarded-since")
+                image_tag = component_info.get("image-tag")
+                print(f"Component: {component_name}, Onboarded Since: {onboarded_since}, Image Tag: {image_tag}")
+
         else:
-            colored_print(f"'[{component_name}]' is not in verify-components list. Skipping nudge verification! ", "yellow")
+            colored_print(f"'{component_name}' is not in verify-components list. Skipping nudge verification!", "yellow")
             print()
-        
-        return component_name, image_name, image_sha
-    
+
+        return component_name, image_name, image_sha, image_tag
+
     except Exception as e:
         colored_print(f"Invalid '{nudged_filename}': Unable to extract SHA Digest from '{params_env}'.", "light_red")
         print()
         colored_print(e, "red")
         exit(1)
+
         
 
 
@@ -481,8 +497,8 @@ def verify_nudge(release, config):
         # colored_print(f"param  : {param}", "blue")
         
         # Extracting details from the nudged file
-        component_name, image_name, image_sha = extract_nudge_details(config, nudged_filename, param)
-            
+        component_name, image_name, image_sha, image_tag = extract_nudge_details(config, nudged_filename, param)
+        tag_to_use = f"{release}-{image_tag}" if image_tag else release
         if image_name:
             if "quay.io/modh" in image_name:
                 # Fetch sha from quay
@@ -493,7 +509,7 @@ def verify_nudge(release, config):
                     mismatch_found = True
                 else:
                     color = 'green'
-                    
+
                 colored_print(f"Component Name  : {component_name}", color)
                 colored_print(f"Image Name      : {image_name}", color)
                 colored_print(f"Image SHA       : {image_sha.split(':')[1]}", color)

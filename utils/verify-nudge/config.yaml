@@ -5,7 +5,6 @@
 # onboarded-since   : (optional) Release where the component was onboarded. [type='str']                             #
 # verify-components : (optional) Components to verify from the nudged file. Verifies all if absent. [type='list']    #
 ######################################################################################################################
-
 - name: kserve
   repo-url: https://github.com/red-hat-data-services/kserve.git
   nudged-file-path: config/overlays/odh/params.env
@@ -15,4 +14,9 @@
   nudged-file-path: config/base/params.env
   onboarded-since: rhoai-2.11
   verify-components:
-    - caikit-standalone-image
+    - name: caikit-standalone-image
+      onboarded-since: rhoai-2.11
+    - name: vllm-image
+      onboarded-since: rhoai-2.14
+      image-tag: cuda
+
