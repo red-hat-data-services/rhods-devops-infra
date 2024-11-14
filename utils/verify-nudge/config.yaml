@@ -15,4 +15,8 @@
   nudged-file-path: config/base/params.env
   onboarded-since: rhoai-2.11
   verify-components:
-    - caikit-standalone-image
+    - name: caikit-standalone-image
+      onboarded-since: rhoai-2.11
+    - name: vllm-image
+      onboarded-since: rhoai-2.14
+      image-tag: cuda
