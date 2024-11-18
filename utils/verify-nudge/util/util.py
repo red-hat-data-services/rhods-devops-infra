@@ -1,6 +1,7 @@
 import os
 import subprocess
 import requests
+import string
 import yaml
 
 
@@ -91,15 +92,17 @@ def download_file(filename, url):
 
 
 
-def parse_yaml(file_path):
+def parse_yaml(file_path, release):
     """
-    Parses a YAML file and returns its content as a Python dictionary.
+    Performs placeholder substitution, Parses the YAML file
+    and returns the content as a Python dictionary.
 
     Args:
         - file_path (str): The path to the YAML file to be parsed.
+        - release (str): The value to substitute for the {{release}} placeholder.
 
     Returns:
-        - dict: The content of the YAML file as a dictionary.
+        - dict: The content of the YAML file as a dictionary, with substitutions applied.
 
     Raises:
         - yaml.YAMLError: Raised if there is an error specific to parsing the YAML content.
@@ -109,9 +112,16 @@ def parse_yaml(file_path):
         The program will print an error message and exit with a status code of 1.
     """
     try:
-        # Open and parse the YAML file
-        with open(file_path) as file:
-            return yaml.safe_load(file)
+        # Open and read the YAML file
+        with open(file_path, 'r') as file:
+            content = file.read()
+
+        # Substitute placeholders in the content
+        template = string.Template(content)
+        substituted_content = template.substitute(release=release)
+
+        # Parse the substituted YAML content
+        return yaml.safe_load(substituted_content)
 
     except yaml.YAMLError as e:
         colored_print(f"YAML error occured while parsing '{file_path}'.", "light_red")

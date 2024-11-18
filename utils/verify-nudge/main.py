@@ -199,7 +199,7 @@ def main():
     mismatch_found = False
     for release in rhoai_releases['releases']:
         
-        configs = util.parse_yaml(file_path="config.yaml")
+        configs = util.parse_yaml(file_path="config.yaml", release=release)
         for config in configs:
             
             util.colored_print("===================================================================================", "white")
