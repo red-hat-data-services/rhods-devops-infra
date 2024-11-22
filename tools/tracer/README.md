@@ -52,5 +52,6 @@ Examples
 * ```./tracer.sh --rhoai-version v2.16 --nightly``` - will provide the basic build info of the latest **nightly** build of 2.16
 * ```./tracer.sh --show-commits``` - will provide the **detailed** build info of with all the commit details of all the components for the latest **CI** build of latest RHOAI version
 * ```./tracer.sh --show-commits --image quay.io/rhoai/rhoai-fbc-fragment@sha256:9f2937c6b367ff1211dba8d71438a93193638ecd06ee644bb9258e1a316a1541``` will provide the **detailed** build info of with all the commit details of all the components for the given image
+* ```./tracer.sh -s modelmesh/0030a6b'``` - will search if there is a SHA containing 0030a6b in all components that match 'modelmesh' in the latest RHOAI version (checks the first 100 commits of a given history)
 * ```./tracer.sh --digest 9f2937c6b367ff1211dba8d71438a93193638ecd06ee644bb9258e1a316a1541``` will show info about the FBC image with the given digest
 * ```./tracer.sh --bundle``` it will show the info about operator-bundle image instead of FBC image, all other parameters can be applied as needed

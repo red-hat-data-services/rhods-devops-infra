@@ -11,6 +11,7 @@ BUNDLE_QUAY_REPO="odh-operator-bundle"
 TAG=
 DIGEST=
 SHOW_COMMITS=
+SEARCH_PARAM=
 IMAGE=
 CONFIGURE=
 UPDATE=
@@ -20,11 +21,12 @@ TEXT_OUTPUT=
 if [[ -z $SKOPEO_TOKEN_FILE_PATH ]]; then SKOPEO_TOKEN_FILE_PATH=~/.ssh/.rhoai_quay_ro_token; fi
 
 function help() {
-  echo "Usage: tracer.sh [-h] [-v] [-c] [-n] [-b] [configure] [update]"
+  echo "Usage: tracer.sh [-h] [-v] [-c] [-s] [-n] [-b] [configure] [update]"
   echo "  -h, --help - Display this help message"
   echo "  -v, --rhoai-version - RHOAI version to get the build info for, valid formats are X.Y or rhoai-X.Y or vX.Y, optional, default value is latest RHOAI version"
   echo "  -d, --digest - Complete digest of the image to be provided as an input, optional, if rhoai-verson and digest both are provided then digest will take precedence"
   echo "  -c --show-commits - Show the commits info for all the components, by default only basic info is shown"
+  echo "  -s --search - search to see if a particular code commit is in the build, use the format COMPONENT/SHA, where COMPONENT and SHA can both be partial matches"
   echo "  -n --nightly - Show the info of latest nightly build, by default the CI-build info is shown"
   echo "  -b --bundle - Show the info about operator bundle image, by default it will show the FBC image info"
   echo "  -i --image - Complete URI of the image to be provided as an input, optional, if image and digest both are provided then image will take precedence, it suppports all the image formats - :tag, @sha256:digest and :tag@sha256:digest"
@@ -57,6 +59,11 @@ while [[ $# -gt 0 ]]; do
         ;;
         --show-commits | -c)
         SHOW_COMMITS=true
+        shift
+        ;;
+        --search | -s)
+        SEARCH_PARAM=$2
+        shift
         shift
         ;;
         --bundle | -b)
@@ -189,6 +196,65 @@ then
     done
   fi
   echo -e "$TEXT_OUTPUT" | column -t
+
+  
+  if [[ -n $SEARCH_PARAM ]] 
+  then
+    # SEARCH_PARAM=trustyai/883c96bz
+    # SEARCH_PARAM=trustyai/883c96b
+    
+    SEARCH_COMPONENT=$(echo $SEARCH_PARAM | grep -o '^.*/' | sed 's|/||' )
+    SEARCH_SHA=$(echo $SEARCH_PARAM | sed 's|^.*/||' | awk '{print tolower($0)}')
+    COMPONENTS=$( echo $labels | jq --arg x "$SEARCH_COMPONENT" -r 'keys[] | select(test(".*\\.git\\.url")) | select(test($x))' | sed 's/\.git\.url//' )
+    FOUND_RESULT=false
+    QUERIES=
+    REPOS=
+    for component in $COMPONENTS
+    do  
+      url_key="$component.git.url"; commit_key="$component.git.commit";
+      
+      URL=$(echo $labels | jq  --arg url_key "$url_key" -r '"\(.[$url_key])"')
+      ORG_REPO=$( echo $URL | sed 's|^https://[^/]*/||' | sed 's/.git$//' )
+      COMMIT=$(echo $labels | jq  --arg commit_key "$commit_key" -r '"\(.[$commit_key])"')
+      
+      API_URL="https://api.github.com/repos/${ORG_REPO}/commits?sha=${COMMIT}&per_page=100"
+      if [[ -n $(echo "$QUERIES" |  grep "$API_URL" ) ]]
+      then
+        # echo "skipped $API_URL" 
+        continue
+      fi  
+      QUERIES+=" $API_URL"
+      REPOS+="\n$ORG_REPO"  
+      API_RESPONSE=$(curl -s ${API_URL} )
+      SEARCH_RESULT=$( echo $API_RESPONSE | jq --arg x "$SEARCH_SHA" -r '.[] | select(.sha | test($x))')
+      if [[ $? -ne 0 ]]
+      then
+        echo "error with github API call"
+        echo "component: $component"
+        echo "repo: $URL"
+        echo "error message:"
+        echo $API_RESPONSE
+        exit 1
+      fi
+      
+      if [[ -n $SEARCH_RESULT ]] 
+      then
+        echo -e "\nFound commit from SHA search term $SEARCH_SHA in $ORG_REPO:\n" 
+        echo $SEARCH_RESULT | jq -r ".html_url"
+        echo "date: $( echo $SEARCH_RESULT | jq -r '.commit.author.date' )"
+        echo "author: $( echo $SEARCH_RESULT | jq -r '.commit.author.name' )"
+        echo "message: "
+        echo "$( echo $SEARCH_RESULT | jq -r '.commit.message' )"
+        FOUND_RESULT=true
+      fi
+    done 
+
+    if [[ "$FOUND_RESULT" == "false" ]]
+    then
+      echo -e "\nCommit SHA search term $SEARCH_PARAM was not found in the latest 100 commits of the following repos: "
+      echo -e "$REPOS"
+    fi
+  fi
 
 else
   echo "Image is not found"
