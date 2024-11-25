@@ -11,7 +11,7 @@ git:
   automerge: 'yes'
   src:
     url: https://github.com/opendatahub-io/kubeflow.git
-    branch: main
+    branch: v1.9-branch
   dest:
     url: https://github.com/red-hat-data-services/kubeflow.git
     branch: master
