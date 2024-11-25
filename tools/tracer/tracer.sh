@@ -26,7 +26,7 @@ function help() {
   echo "  -v, --rhoai-version - RHOAI version to get the build info for, valid formats are X.Y or rhoai-X.Y or vX.Y, optional, default value is latest RHOAI version"
   echo "  -d, --digest - Complete digest of the image to be provided as an input, optional, if rhoai-verson and digest both are provided then digest will take precedence"
   echo "  -c --show-commits - Show the commits info for all the components, by default only basic info is shown"
-  echo "  -s --search - search to see if a particular code commit is in the build.  Use the format REPO_NAME/SHA, where REPO_NAME and SHA can both be partial matches"
+  echo "  -s --search - search to see if a particular code commit is in the build.  Use the format REPO_NAME/SHA_PREFIX. REPO_NAME can be a partial match"
   echo "  -n --nightly - Show the info of latest nightly build, by default the CI-build info is shown"
   echo "  -b --bundle - Show the info about operator bundle image, by default it will show the FBC image info"
   echo "  -i --image - Complete URI of the image to be provided as an input, optional, if image and digest both are provided then image will take precedence, it suppports all the image formats - :tag, @sha256:digest and :tag@sha256:digest"
@@ -231,7 +231,7 @@ then
       QUERIES+=" $API_URL"
       REPOS+="\n$ORG_REPO"  
       API_RESPONSE=$(curl -s ${API_URL} )
-      SEARCH_RESULT=$( echo $API_RESPONSE | jq --arg x "$SEARCH_SHA" -r '.[] | select(.sha | test($x))')
+      SEARCH_RESULT=$( echo $API_RESPONSE | jq --arg x "^$SEARCH_SHA" -r '.[] | select(.sha | test($x))')
       if [[ $? -ne 0 ]]
       then
         echo "error with github API call"
@@ -244,7 +244,7 @@ then
       
       if [[ -n $SEARCH_RESULT ]] 
       then
-        echo -e "\nFound commit SHA matching '$SEARCH_SHA' in $ORG_REPO:" 
+        echo -e "\nFound commit SHA starting with '$SEARCH_SHA' in $ORG_REPO:" 
         echo -e "----"
         echo -e "component\t $component"
         echo -e "source\t\t ${URL}/tree/${COMMIT}"
@@ -263,7 +263,7 @@ then
       echo "Did not find any components with a source repo matching '$SEARCH_REPO'"
     elif [[ "$FOUND_RESULT" == "false" ]]
     then
-      echo -e "\nCommit SHA search term $SEARCH_SHA was not found in the latest 100 commits of the following repos: "
+      echo -e "\nCommit SHA starting with $SEARCH_SHA was not found in the latest 100 commits of the following repos: "
       echo -e "$REPOS"
     fi
   fi
