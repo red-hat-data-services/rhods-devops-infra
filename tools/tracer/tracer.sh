@@ -244,16 +244,14 @@ then
       
       if [[ -n $SEARCH_RESULT ]] 
       then
-        echo -e "\nFound commit SHA matching '$SEARCH_SHA' in $ORG_REPO:\n" 
-        cat <<EOF | column -t -s '%' 
-----
-component% $component
-source% ${URL}/tree/${COMMIT}
-----
-commit% $( echo $SEARCH_RESULT | jq -r '.html_url')
-date% $( echo $SEARCH_RESULT | jq -r '.commit.author.date' )
-author% $( echo $SEARCH_RESULT | jq -r '.commit.author.name' )
-EOF
+        echo -e "\nFound commit SHA matching '$SEARCH_SHA' in $ORG_REPO:" 
+        echo -e "----"
+        echo -e "component\t $component"
+        echo -e "source\t\t ${URL}/tree/${COMMIT}"
+        echo -e "----"
+        echo -e "commit\t\t $( echo $SEARCH_RESULT | jq -r '.html_url')"
+        echo -e "date\t\t $( echo $SEARCH_RESULT | jq -r '.commit.author.date' )"
+        echo -e "author\t\t $( echo $SEARCH_RESULT | jq -r '.commit.author.name' )"
         echo "message: "
         echo "$SEARCH_RESULT" | jq -r '.commit.message' 
         echo "----"
@@ -262,10 +260,10 @@ EOF
     done 
     if [[ "$FOUND_MATCHING_REPO" == "false" ]]
     then
-			echo "Did not find any components with a source repo matching '$SEARCH_REPO'"
+      echo "Did not find any components with a source repo matching '$SEARCH_REPO'"
     elif [[ "$FOUND_RESULT" == "false" ]]
     then
-      echo -e "\nCommit SHA search term $SEARCH_PARAM was not found in the latest 100 commits of the following repos: "
+      echo -e "\nCommit SHA search term $SEARCH_SHA was not found in the latest 100 commits of the following repos: "
       echo -e "$REPOS"
     fi
   fi
