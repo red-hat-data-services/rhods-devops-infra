@@ -253,14 +253,6 @@ git:
   dest:
     url: https://github.com/red-hat-data-services/vllm.git
     branch: main
-- name: vllm-gaudi
-  automerge: 'yes'
-  src:
-    url: https://github.com/opendatahub-io/vllm-gaudi.git
-    branch: release
-  dest:
-    url: https://github.com/red-hat-data-services/vllm-gaudi.git
-    branch: main
 - name: lm-evaluation-harness
   automerge: 'yes'
   src:
