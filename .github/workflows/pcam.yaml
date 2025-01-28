@@ -1,0 +1,61 @@
+name: PCAM Run
+
+on:
+  pull_request_target:
+    types: [opened]
+
+jobs:
+  process_pr:
+    if: ${{ github.event.sender.login != 'konflux-internal-p02[bot]' && github.event.sender.login != 'devops-bot' }}
+    runs-on: ubuntu-latest
+    env:
+      JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      # Step 1: Clone the repository containing releases.yaml
+      - name: Clone releases repository
+        run: |
+          git clone https://github.com/red-hat-data-services/rhods-devops-infra.git
+          echo "Releases repository cloned."
+
+      # Step 2: Install yq and check branch in releases.yaml
+      - name: Check if branch is in allowed releases
+        run: |
+          # Install yq
+          sudo wget https://github.com/mikefarah/yq/releases/download/v4.6.1/yq_linux_amd64 -O /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq
+      
+          # Get the base branch of the PR
+          base_branch="${{ github.event.pull_request.base.ref }}"
+      
+          # Load allowed releases from releases.yaml and check if base branch is allowed
+          allowed_releases=$(yq eval '.releases[]' rhods-devops-infra/src/config/releases.yaml)
+      
+          if echo "$allowed_releases" | grep -qx "$base_branch"; then
+            echo "Branch '$base_branch' is allowed. Proceeding."
+          else
+            echo "Branch '$base_branch' is not in allowed releases. Exiting."
+            exit 1
+          fi
+
+      # Step 2: generate token and trigger the other workflow in the automation repository
+      - name: Generate github-app token
+        id: app-token
+        uses: getsentry/action-github-app-token@v2
+        with:
+          app_id: ${{ secrets.RHDS_DEVOPS_APP_ID }}
+          private_key: ${{ secrets.RHDS_DEVOPS_APP_PRIVATE_KEY }}
+          
+      - uses: lasith-kg/dispatch-workflow@v2.0.0
+        id: trigger-another-workflow
+        name: Trigger another workflow to process PR
+        if: ${{ github.event.sender.login != 'konflux-internal-p02[bot]' && github.event.sender.login != 'devops-bot' }}
+        with:
+          dispatch-method: workflow_dispatch
+          repo: test-automerger
+          owner: rhoai-rhtap
+          workflow: post-codefreeze-auto-merger.yml
+          token: ${{ steps.app-token.outputs.token }}
+          workflow-inputs: '{"pr_id": "${{ github.event.pull_request.number }}", "repo": "${{ github.event.repository.name }}"}'
+          ref: 'main'
