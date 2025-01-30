@@ -51,7 +51,7 @@ class release_processor:
             if component['containerImage'] not in self.expected_rhoai_images:
                 print(f"snapshot image not found in catalog - {component['containerImage']}")
             else:
-                print(f'snapshot image found in catalog - {component['containerImage']}!')
+                print(f"snapshot image found in catalog - {component['containerImage']}!")
 
 
 
