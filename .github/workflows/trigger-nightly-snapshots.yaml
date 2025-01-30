@@ -62,5 +62,8 @@ jobs:
           epoch=$(date +%s)
           update="{{ matrix.version }} $epoch"
           echo $update > ./params
-          git commit -am "Update params to $update"
+          git config --global user.name "rhods-devops-app[bot]"
+          git config --global user.email "323671+rhods-devops-app[bot]@users.noreply.github.com"
+          git add ./params
+          git commit -m "Update params to $update"
           git push
