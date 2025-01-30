@@ -53,17 +53,16 @@ jobs:
       - name: clone ec-reporter repo
         uses: actions/checkout@v3
         with:
-          name: ${{ env.GITHUB_ORG }}/EC-Reporter
+          repository: ${{ env.GITHUB_ORG }}/EC-Reporter
           token: ${{ steps.app-token.outputs.token }}
       - name: update ec-reporter
         run: |
           pwd
           ls
           epoch=$(date +%s)
-          update="{{ matrix.version }} $epoch"
+          update="${{ matrix.version }} $epoch"
           echo $update > ./params
           git config --global user.name "rhods-devops-app[bot]"
           git config --global user.email "323671+rhods-devops-app[bot]@users.noreply.github.com"
-          git add ./params
-          git commit -m "Update params to $update"
+          git commit -am "Update params to $update"
           git push
