@@ -35,7 +35,6 @@ on:
           - odh-dashboard
           - odh-manifests
           - odh-model-controller
-          - opendatahub-operator
           - rest-proxy
           - rhods-operator
           - training-operator

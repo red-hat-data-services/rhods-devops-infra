@@ -3,15 +3,29 @@
 # yq
 # ~/.ssh/.quay_devops_application_token
 
+# Exit on error
+set -eo pipefail
+
 release_branch=rhoai-2.16
-rhoai_version=2.16.0
+rhoai_version=2.16.1
 hyphenized_rhoai_version=v2-16
 
 image_uri=LATEST_NIGHTLY
-#image_uri="quay.io/rhoai/rhoai-fbc-fragment@sha256:9c39ccac201a8d2febe05916066faee2828db2e0388f608620d8665148774863"
+#image_uri="quay.io/rhoai/rhoai-fbc-fragment@sha256:f22c30986703bf09bd3c63ddc2f1140d099967a61bb1b579b9f5071e39588bf6"
 
 FBC_QUAY_REPO=quay.io/rhoai/rhoai-fbc-fragment
 RBC_URL=https://github.com/red-hat-data-services/RHOAI-Build-Config
+
+# used gsed for MacOS
+if [[ "$(uname)" == "Darwin" ]]; then
+  if ! command -v gsed &>/dev/null; then
+      echo "gsed is not installed. Please install it using 'brew install gnu-sed'."
+      exit 1
+  fi
+  sed_command="gsed"
+else
+  sed_command="sed"
+fi
 
 IFS='.' read -a parts <<< "$rhoai_version"
 micro_version=${parts[2]}
@@ -52,6 +66,25 @@ mkdir -p ${release_fbc_dir}
 mkdir -p ${release_fbc_addon_dir}
 mkdir -p ${snapshot_fbc_dir}
 
+# Function to delete the directories if an error occurs. This is to prevent the creation of duplicate manifests during re-runs.
+cleanup() {
+    echo "*****************************************************************************************"
+    echo "Error occurred at line $1".
+    echo "Failed Command: $BASH_COMMAND"
+    echo "*****************************************************************************************"
+    echo "Initializing Cleanup..."
+    set -x
+    rm -rf "${workspace}"
+    rm -rf "${release_fbc_dir}"
+    rm -rf "${release_fbc_addon_dir}"
+    rm -rf "${snapshot_fbc_dir}"
+    set +x
+    echo "Cleanup successful!"
+}
+
+# Set trap to call cleanup on script exit, but only if the exit code is non-zero
+trap 'if [ $? -ne 0 ]; then cleanup $LINENO; fi' EXIT
+
 template_dir=templates/stage
 
 RBC_RELEASE_DIR=${workspace}/RBC_${release_branch}_main
@@ -70,90 +103,121 @@ BUILD_CONFIG_PATH=${RBC_RELEASE_DIR}/config/build-config.yaml
 cd ${current_dir}
 
 
+ocp_versions_array=()
+while IFS= read -r version; do
+  ocp_versions_array+=("$version")
+done < <(yq eval '.config.supported-ocp-versions.release[]' $BUILD_CONFIG_PATH)
 
-readarray ocp_versions < <(yq eval '.config.supported-ocp-versions.release[]' $BUILD_CONFIG_PATH)
-first_ocp_version=$(echo ${ocp_versions[0]} | tr -d '\n')
+echo "*****************************************************************************************"
+printf "Generating FBC Artifacts For OCP Versions: $(printf "\"%s\" " "${ocp_versions_array[@]}")\n"
+echo "*****************************************************************************************"
+
+first_ocp_version=$(echo ${ocp_versions_array[0]} | tr -d '\n')
 fbc_application_tag=ocp-${first_ocp_version/v4/4}-${release_branch}
 
 
-  while IFS= read -r ocp_version;
-  do
-    fbc_application_suffix=${ocp_version/v4./4}
-    fbc_application_name=${fbc_application_prefix}${fbc_application_suffix}
-    fbc_application_tag=ocp-${ocp_version/v4/4}-${release_branch}
-    echo "fbc_application_name=${fbc_application_name}"
-    echo "fbc_application_tag=${fbc_application_tag}"
+for ocp_version in "${ocp_versions_array[@]}"; do
+  fbc_application_suffix=${ocp_version/v4./4}
+  fbc_application_name=${fbc_application_prefix}${fbc_application_suffix}
+  fbc_application_tag=ocp-${ocp_version/v4/4}-${release_branch}
+  echo "fbc_application_name=${fbc_application_name}"
+  echo "fbc_application_tag=${fbc_application_tag}"
 
-    image_uri=docker://${FBC_QUAY_REPO}:${fbc_application_tag}
-    META=$(skopeo inspect "${image_uri}")
-    DIGEST=$(echo $META | jq -r .Digest)
-    FULL_IMAGE_URI_WITH_DIGEST="${FBC_QUAY_REPO}@${DIGEST}"
-    echo "FBCF-${ocp_version} - ${FULL_IMAGE_URI_WITH_DIGEST}"
-    RBC_CURRENT_COMMIT=$(echo $META | jq -r '.Labels | ."rbc-release-branch.commit"')
-    GIT_URL=$(echo $META | jq -r '.Labels | ."git.url"')
-    GIT_COMMIT=$(echo $META | jq -r '.Labels | ."git.commit"')
+  image_uri=docker://${FBC_QUAY_REPO}:${fbc_application_tag}
+  META=$(skopeo inspect "${image_uri}")
+  DIGEST=$(echo $META | jq -r .Digest)
+  FULL_IMAGE_URI_WITH_DIGEST="${FBC_QUAY_REPO}@${DIGEST}"
+  echo "FBCF-${ocp_version} - ${FULL_IMAGE_URI_WITH_DIGEST}"
+  RBC_CURRENT_COMMIT=$(echo $META | jq -r '.Labels | ."rbc-release-branch.commit"')
+  GIT_URL=$(echo $META | jq -r '.Labels | ."git.url"')
+  GIT_COMMIT=$(echo $META | jq -r '.Labels | ."git.commit"')
 
-    if [[ ${RBC_CURRENT_COMMIT} != ${RBC_RELEASE_BRANCH_COMMIT} ]]
-    then
-      echo "Stage FBC images are out of sync, it might be because push-to-stage is in progress, please try after sometime or contact the DevOps team.."
-      exit 1
-    fi
+  if [[ ${RBC_CURRENT_COMMIT} != ${RBC_RELEASE_BRANCH_COMMIT} ]]
+  then
+    echo "Stage FBC images are out of sync, it might be because push-to-stage is in progress, please try after sometime or contact the DevOps team.."
+    exit 1
+  fi
 
-    # generate FBC Release CR
-    fbc_release_yaml_path=${release_fbc_dir}/release-fbc-stage-ocp-${fbc_application_suffix}-${component_application}-${epoch}.yaml
-    cp ${template_dir}/release-fbc-stage.yaml ${fbc_release_yaml_path}
-    sed -i "s/{{fbc_application}}/${fbc_application_name}/g" ${fbc_release_yaml_path}
-    sed -i "s/{{epoch}}/${epoch}/g" ${fbc_release_yaml_path}
-    sed -i "s/{{ocp-version}}/ocp-${fbc_application_suffix}/g" ${fbc_release_yaml_path}
-    sed -i "s/{{hyphenized-rhoai-version}}/${hyphenized_rhoai_version}/g" ${fbc_release_yaml_path}
-    sed -i "s/{{rbc_release_commit}}/${RBC_RELEASE_BRANCH_COMMIT}/g" ${fbc_release_yaml_path}
+  echo "Generating FBC Release CRs..."
+  fbc_release_yaml_path=${release_fbc_dir}/release-fbc-stage-ocp-${fbc_application_suffix}-${component_application}-${epoch}.yaml
+  cp ${template_dir}/release-fbc-stage.yaml ${fbc_release_yaml_path}
+  ${sed_command} -i "s/{{fbc_application}}/${fbc_application_name}/g" ${fbc_release_yaml_path}
+  ${sed_command} -i "s/{{epoch}}/${epoch}/g" ${fbc_release_yaml_path}
+  ${sed_command} -i "s/{{ocp-version}}/ocp-${fbc_application_suffix}/g" ${fbc_release_yaml_path}
+  ${sed_command} -i "s/{{hyphenized-rhoai-version}}/${hyphenized_rhoai_version}/g" ${fbc_release_yaml_path}
+  ${sed_command} -i "s/{{rbc_release_commit}}/${RBC_RELEASE_BRANCH_COMMIT}/g" ${fbc_release_yaml_path}
+  echo "FBC Release CRs Generated Successfuly at ${fbc_release_yaml_path}"
 
-    #addon FBC release will be created only for minor versions
-    if [[ "${fbc_application_suffix}" == "416" ]] && [[ $micro_version -eq 0 ]]
-    then
-      fbc_addon_release_yaml_path=${release_fbc_addon_dir}/release-fbc-addon-stage-ocp-${fbc_application_suffix}-${component_application}-${epoch}.yaml
-      cp ${template_dir}/release-fbc-addon-stage.yaml ${fbc_addon_release_yaml_path}
-      sed -i "s/{{fbc_application}}/${fbc_application_name}/g" ${fbc_addon_release_yaml_path}
-      sed -i "s/{{epoch}}/${epoch}/g" ${fbc_addon_release_yaml_path}
-      sed -i "s/{{ocp-version}}/ocp-${fbc_application_suffix}/g" ${fbc_addon_release_yaml_path}
-      sed -i "s/{{hyphenized-rhoai-version}}/${hyphenized_rhoai_version}/g" ${fbc_addon_release_yaml_path}
-      sed -i "s/{{rbc_release_commit}}/${RBC_RELEASE_BRANCH_COMMIT}/g" ${fbc_addon_release_yaml_path}
-    fi
+  #addon FBC release will be created only for minor versions
+  if [[ "${fbc_application_suffix}" == "416" ]] && [[ $micro_version -eq 0 ]]
+  then
+    echo ">> [Add-on FBC] Generating Addon FBC Release CRs..."
+    fbc_addon_release_yaml_path=${release_fbc_addon_dir}/release-fbc-addon-stage-ocp-${fbc_application_suffix}-${component_application}-${epoch}.yaml
+    cp ${template_dir}/release-fbc-addon-stage.yaml ${fbc_addon_release_yaml_path}
+    ${sed_command} -i "s/{{fbc_application}}/${fbc_application_name}/g" ${fbc_addon_release_yaml_path}
+    ${sed_command} -i "s/{{epoch}}/${epoch}/g" ${fbc_addon_release_yaml_path}
+    ${sed_command} -i "s/{{ocp-version}}/ocp-${fbc_application_suffix}/g" ${fbc_addon_release_yaml_path}
+    ${sed_command} -i "s/{{hyphenized-rhoai-version}}/${hyphenized_rhoai_version}/g" ${fbc_addon_release_yaml_path}
+    ${sed_command} -i "s/{{rbc_release_commit}}/${RBC_RELEASE_BRANCH_COMMIT}/g" ${fbc_addon_release_yaml_path}
+    echo "Addon FBC Release CR Generated Successfuly at ${fbc_addon_release_yaml_path}"
+  fi
 
-    # generate FBC snapshots
-    fbc_snapshot_yaml_path=${snapshot_fbc_dir}/snapshot-fbc-stage-ocp-${fbc_application_suffix}-${component_application}-${epoch}.yaml
-    cp ${template_dir}/fbc_snapshot.yaml ${fbc_snapshot_yaml_path}
-    sed -i "s/{{fbc_application}}/${fbc_application_name}/g" ${fbc_snapshot_yaml_path}
-    sed -i "s/{{ocp-version}}/ocp-${fbc_application_suffix}/g" ${fbc_snapshot_yaml_path}
-    sed -i "s/{{epoch}}/${epoch}/g" ${fbc_snapshot_yaml_path}
-    sed -i "s/{{fbc_fragment_image}}/${FULL_IMAGE_URI_WITH_DIGEST//\//\\/}/g" ${fbc_snapshot_yaml_path}
-    sed -i "s/{{git_url}}/${GIT_URL//\//\\/}/g" ${fbc_snapshot_yaml_path}
-    sed -i "s/{{git_commit}}/${GIT_COMMIT}/g" ${fbc_snapshot_yaml_path}
-    sed -i "s/{{rbc_release_commit}}/${RBC_RELEASE_BRANCH_COMMIT}/g" ${fbc_snapshot_yaml_path}
+  echo "Generating FBC Snapshots..."
+  fbc_snapshot_yaml_path=${snapshot_fbc_dir}/snapshot-fbc-stage-ocp-${fbc_application_suffix}-${component_application}-${epoch}.yaml
+  cp ${template_dir}/fbc_snapshot.yaml ${fbc_snapshot_yaml_path}
+  ${sed_command} -i "s/{{fbc_application}}/${fbc_application_name}/g" ${fbc_snapshot_yaml_path}
+  ${sed_command} -i "s/{{ocp-version}}/ocp-${fbc_application_suffix}/g" ${fbc_snapshot_yaml_path}
+  ${sed_command} -i "s/{{epoch}}/${epoch}/g" ${fbc_snapshot_yaml_path}
+  ${sed_command} -i "s/{{fbc_fragment_image}}/${FULL_IMAGE_URI_WITH_DIGEST//\//\\/}/g" ${fbc_snapshot_yaml_path}
+  ${sed_command} -i "s/{{git_url}}/${GIT_URL//\//\\/}/g" ${fbc_snapshot_yaml_path}
+  ${sed_command} -i "s/{{git_commit}}/${GIT_COMMIT}/g" ${fbc_snapshot_yaml_path}
+  ${sed_command} -i "s/{{rbc_release_commit}}/${RBC_RELEASE_BRANCH_COMMIT}/g" ${fbc_snapshot_yaml_path}
+  echo "FBC Snapshots Generated Successfuly at ${fbc_snapshot_yaml_path}"
+  echo
 
-  done < <(yq eval '.config.supported-ocp-versions.release[]' $BUILD_CONFIG_PATH)
-echo "all FBC images tag are matching!"
+done
+
+echo
+echo ">> Artifacts Generated Successfully! All FBC images tag are matching!"
+echo
 
 
-#RBC_RELEASE_BRANCH_COMMIT=7da42450e089babe0dc31f182e78152c349f201a
-cd ${release_artifacts_dir}
+# After the release artifacts are generated, prompt for confirmation
+read -p "Do you want to initiate push to staging? (y/n): " user_input
 
-#Create all the FBC snapshots for onprem
-oc apply -f snapshot-fbc
 
-#Start all the FBC releases for onprem
-oc apply -f release-fbc
+if [[ "$user_input" == "y" || "$user_input" == "Y" ]]; then
 
-#Start addon FBC release
-oc apply -f release-fbc-addon
+    echo "*****************************************************************************************"
+    echo " Creating the required resources for the release..."
+    echo "*****************************************************************************************"
+    echo
+    #RBC_RELEASE_BRANCH_COMMIT=7da42450e089babe0dc31f182e78152c349f201a
+    cd ${release_artifacts_dir}
 
-sleep 10
+    #Create all the FBC snapshots for onprem
+    oc apply -f snapshot-fbc
 
-  echo "Please ensure following pipelines are green"
-  while IFS= read -r ocp_version;
-  do
-    fbc_application_suffix=${ocp_version/v4./4}
-    fbc_application_name=${fbc_application_prefix}${fbc_application_suffix}
-    echo "${fbc_application_name}"
-    oc get pipelinerun -n rhtap-releng-tenant -l appstudio.openshift.io/snapshot=${fbc_application_name}-${epoch}
-  done < <(yq eval '.config.supported-ocp-versions.release[]' $BUILD_CONFIG_PATH)
+    #Start all the FBC releases for onprem
+    oc apply -f release-fbc
+
+    #Start addon FBC release
+    oc apply -f release-fbc-addon
+
+    sleep 10
+    echo
+    echo ">> All required resources have been successfully created. Release Pipelines have been triggered."
+    echo ">> Please ensure following pipelines are green:"
+    for ocp_version in "${ocp_versions_array[@]}"; do
+      fbc_application_suffix=${ocp_version/v4./4}
+      fbc_application_name=${fbc_application_prefix}${fbc_application_suffix}
+      echo "${fbc_application_name}"
+      oc get pipelinerun -n rhtap-releng-tenant -l appstudio.openshift.io/snapshot=${fbc_application_name}-${epoch}
+    done
+
+else
+    echo "Aborting push to staging..."
+fi
+
+# cleanup workspace before exiting
+rm -rf "${workspace}"

@@ -1,6 +1,6 @@
 git:
 - name: odh-dashboard
-  automerge: 'yes'
+  automerge: 'no'
   src:
     url: https://github.com/opendatahub-io/odh-dashboard.git
     branch: main
