@@ -1,4 +1,4 @@
-name: Trigger Snapshots for Nightlies
+name: Create Snapshots and Run EC Validation
 
 on:
   schedule:
