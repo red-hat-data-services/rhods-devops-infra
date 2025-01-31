@@ -17,15 +17,20 @@ pipelinerun=$(kubectl get pipelinerun -l "appstudio.openshift.io/snapshot=$snaps
 echo "waiting for verify task to start..."
 kubectl wait --for='jsonpath={.status.childReferences[?(@.pipelineTaskName=="verify")]}' pipelinerun "$pipelinerun" --timeout=10m
 task_name=$(kubectl get pipelinerun "$pipelinerun"  -o jsonpath='{.status.childReferences[0].name}')
-pod_name="${task_name}-pod"
 
-echo "waiting for $pod_name to be created"
-kubectl wait --for=create pod "$pod_name" --timeout=20m
-echo "waiting for $pod_name to finish"
-kubectl wait --for='jsonpath={.status.conditions[?(@.reason=="PodCompleted")].status}=True' pod "$pod_name" --timeout=60m
+pod_label="tekton.dev/taskRun=$task_name"
+echo "waiting for pod with label $pod_label to be created"
+# need this sleep 5 for some reason
+sleep 5
+kubectl wait --for=create pod -l "$pod_label" --timeout=20m
+pod_name=$(kubectl get pod -l "$pod_label" --no-headers | awk '{print $1}')
 
+# echo "waiting for pod to be ready"
+# kubectl wait --for=condition=Ready pod "$pod_name" --timeout=60m
+echo "waiting for container step-report-json in $pod_name to finish"
+kubectl wait --for='jsonpath={.status.containerStatuses[?(@.name=="step-report-json")].state.terminated}' pod "$pod_name" --timeout=30m
+kubectl logs "$pod_name" step-report-json | tee $output_file
+echo $pipelinerun >> "$output_file"
 
-kubectl logs "$pod_name" step-report-json > $output_file
-echo $pipelinerun
-
+exit 0
 

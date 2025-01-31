@@ -24,7 +24,7 @@ ec_component_test="$APPLICATION-registry-rhoai-prod-enterprise-contract"
 ec_fbc_test="$APPLICATION-fbc-rhoai-prod-enterprise-contract"
 # generate component snapshot
 # requires RHOAI_QUAY_API_TOKEN env var to be set
-bash make-nightly-snapshots.sh "$VERSION"
+bash ./make-nightly-snapshots.sh "$VERSION"
 
 # apply and mark snapshot so that the EC gets run against it
 kubectl apply -f nightly-snapshots/snapshot-components
@@ -33,19 +33,25 @@ echo kubectl label snapshot "$snapshot_name" "test.appstudio.openshift.io/run=$e
 kubectl label snapshot "$snapshot_name" "test.appstudio.openshift.io/run=$ec_component_test"
 
 # monitor pipelinerun 
-components_results_file=./components_results.json 
-bash ./monitor-snapshot.sh "$snapshot_name" "$ec_component_test" "$components_results_file" | tee ./monitor-snapshot-output.txt
+ec_results_file=./components-results.json 
+monitor_snapshot_output=./monitor-snapshot-output.txt
+bash ./monitor-snapshot.sh "$snapshot_name" "$ec_component_test" "$monitor_snapshot_output" 
 
-PIPELINE_NAME=$(cat ./monitor-snapshot-output.txt | tail -n 1)
+echo "processing log output"
+
+PIPELINE_NAME=$(cat "$monitor_snapshot_output" | tail -n 1 )
+cat $monitor_snapshot_output | tail -n 2 | head -n 1 
+cat $monitor_snapshot_output | tail -n 2 | head -n 1 > "$ec_results_file"
+
 WEB_URL="https://konflux.apps.stone-prod-p02.hjvn.p1.openshiftapps.com/application-pipeline/workspaces/rhoai/applications/$APPLICATION" 
 
 # create formatted yaml file to send to slack
-cat "$components_results_file" | jq '[.components[] | select(.violations)] | map({name, containerImage, violations: [.violations[] | {msg} + (.metadata | {description, solution})]}) ' | yq -P > "${HOME}/component-results-slack.yaml"
+cat "$ec_results_file" | jq '[.components[] | select(.violations)] | map({name, containerImage, violations: [.violations[] | {msg} + (.metadata | {description, solution})]}) ' | yq -P > "${HOME}/component-results-slack.yaml"
 
 # create inital slack message
-num_errors=$(cat "$components_results_file"| jq '[.components[].violations | length] | add')
-num_warnings=$(cat "$components_results_file" | jq '[.components[].warnings | length] | add')
-num_error_components=$(cat "$components_results_file" | jq '[.components[] | select(.violations) | .name] | length')
+num_errors=$(cat "$ec_results_file"| jq '[.components[].violations | length] | add')
+num_warnings=$(cat "$ec_results_file" | jq '[.components[].warnings | length] | add')
+num_error_components=$(cat "$ec_results_file" | jq '[.components[] | select(.violations) | .name] | length')
 
 MESSAGE="EC validation test $ec_component_test for $APPLICATION (<$WEB_URL/pipelineruns/$PIPELINE_NAME|$PIPELINE_NAME>) had $num_errors errors and $num_warnings warnings across $num_error_components components"
 
