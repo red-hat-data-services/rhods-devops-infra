@@ -16,7 +16,7 @@ pipelinerun=$(kubectl get pipelinerun -l "appstudio.openshift.io/snapshot=$snaps
 
 echo "waiting for verify task to start..."
 kubectl wait --for='jsonpath={.status.childReferences[?(@.pipelineTaskName=="verify")]}' pipelinerun "$pipelinerun" --timeout=10m
-task_name=$(kubectl get pipelinerun rhoai-v2-17-registry-rhoai-prod-enterprise-contract-n25zc -o jsonpath='{.status.childReferences[0].name}')
+task_name=$(kubectl get pipelinerun "$pipelinerun"  -o jsonpath='{.status.childReferences[0].name}')
 pod_name="${task_name}-pod"
 
 echo "waiting for $pod_name to be created"
