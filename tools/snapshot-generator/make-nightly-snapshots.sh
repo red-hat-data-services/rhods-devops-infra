@@ -21,6 +21,17 @@ if [ -z "$RHOAI_QUAY_API_TOKEN" ]; then
   exit 1
 fi
 
+# used gsed for MacOS
+if [[ "$(uname)" == "Darwin" ]]; then
+  if ! command -v gsed &>/dev/null; then
+      echo "gsed is not installed. Please install it using 'brew install gnu-sed'."
+      exit 1
+  fi
+  sed_command="gsed"
+else
+  sed_command="sed"
+fi
+
 # example: 2.17.0
 rhoai_version=$1
 
@@ -56,7 +67,6 @@ echo "starting to create the artifacts corresponding to the sourcecode at ${RBC_
 component_application=rhoai-${hyphenized_rhoai_version}
 
 echo "component application: $component_application"
-fbc_application_prefix=rhoai-fbc-fragment-ocp-
 
 
 current_dir=$(pwd)
@@ -91,10 +101,13 @@ echo "${V417_CATALOG_YAML_PATH}" >> .git/info/sparse-checkout
 echo "config/build-config.yaml" >> .git/info/sparse-checkout
 git fetch -q --depth=1 origin ${RBC_RELEASE_BRANCH_COMMIT}
 git checkout -q ${RBC_RELEASE_BRANCH_COMMIT}
+
 CATALOG_YAML_PATH=${RBC_RELEASE_DIR}/${V417_CATALOG_YAML_PATH}
 BUILD_CONFIG_PATH=${RBC_RELEASE_DIR}/config/build-config.yaml
+
 cd ${current_dir}
 
+# generate component snapshot
 CATALOG_YAML_PATH=${RBC_RELEASE_DIR}/${V417_CATALOG_YAML_PATH}
 
 RHOAI_KONFLUX_COMPONENTS_DETAILS_FILE_PATH=${workspace}/konflux_components.txt
@@ -103,5 +116,38 @@ kubectl get components -o=jsonpath="{range .items[?(@.spec.application=='${compo
 
 
 RHOAI_QUAY_API_TOKEN=${RHOAI_QUAY_API_TOKEN} python release_processor.py --operation generate-snapshots --catalog-yaml-path ${CATALOG_YAML_PATH} --konflux-components-details-file-path ${RHOAI_KONFLUX_COMPONENTS_DETAILS_FILE_PATH} --rhoai-version ${rhoai_version} --rhoai-application ${component_application} --epoch ${epoch} --output-dir ${output_dir} --template-dir ${template_dir} --rbc-release-commit ${RBC_RELEASE_BRANCH_COMMIT}
+
+# generate FBC snapshot
+ocp_version="v4.17"
+fbc_application_suffix=${ocp_version/v4./4}
+fbc_component_name=rhoai-fbc-fragment-${hyphenized_rhoai_version}
+fbc_application_tag=${release_branch}-nightly
+echo "fbc_component_name=${fbc_component_name}"
+echo "fbc_application_tag=${fbc_application_tag}"
+
+image_uri=docker://${FBC_QUAY_REPO}:${fbc_application_tag}
+META=$(skopeo inspect --no-tags "${image_uri}")
+DIGEST=$(echo $META | jq -r .Digest)
+FULL_IMAGE_URI_WITH_DIGEST="${FBC_QUAY_REPO}@${DIGEST}"
+echo "FBCF-${ocp_version} - ${FULL_IMAGE_URI_WITH_DIGEST}"
+GIT_URL=$(echo $META | jq -r '.Labels | ."git.url"')
+GIT_COMMIT=$(echo $META | jq -r '.Labels | ."git.commit"')
+
+
+echo "Generating FBC Snapshots..."
+fbc_snapshot_yaml_path=${snapshot_fbc_dir}/snapshot-fbc-stage-ocp-${fbc_application_suffix}-${component_application}-${epoch}.yaml
+cp ${template_dir}/fbc_snapshot.yaml ${fbc_snapshot_yaml_path}
+${sed_command} -i "s/{{fbc_component}}/${fbc_component_name}/g" ${fbc_snapshot_yaml_path}
+${sed_command} -i "s/{{rhoai_application}}/${component_application}/g" ${fbc_snapshot_yaml_path}
+${sed_command} -i "s/{{ocp-version}}/ocp-${fbc_application_suffix}/g" ${fbc_snapshot_yaml_path}
+${sed_command} -i "s/{{epoch}}/${epoch}/g" ${fbc_snapshot_yaml_path}
+${sed_command} -i "s/{{fbc_fragment_image}}/${FULL_IMAGE_URI_WITH_DIGEST//\//\\/}/g" ${fbc_snapshot_yaml_path}
+${sed_command} -i "s/{{git_url}}/${GIT_URL//\//\\/}/g" ${fbc_snapshot_yaml_path}
+${sed_command} -i "s/{{git_commit}}/${GIT_COMMIT}/g" ${fbc_snapshot_yaml_path}
+${sed_command} -i "s/{{rbc_release_commit}}/${RBC_RELEASE_BRANCH_COMMIT}/g" ${fbc_snapshot_yaml_path}
+echo "FBC Snapshots Generated Successfuly at ${fbc_snapshot_yaml_path}"
+
+
+
 
 
