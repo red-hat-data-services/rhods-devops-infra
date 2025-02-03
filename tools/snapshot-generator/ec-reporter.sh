@@ -7,6 +7,8 @@ set -eo pipefail
 # Required environment varaiables:
 
 # K8S_SA_TOKEN - k8s service account that can create, update, patch snapshots
+# SLACK_TOKEN - oauth token for slack
+# SLACK_CHANNEL - channel id to send message
 # RHOAI_QUAY_API_TOKEN 
 # VERSION - the rhoai version in x.y.z form
 # KUBERNETES_SERVICE_HOST - should be set automatically by k8s
@@ -70,3 +72,7 @@ num_warning_components=$(cat "$ec_results_file" | jq '[.components[] | select(.w
 MESSAGE="EC validation test $ec_test for $APPLICATION (<$WEB_URL/pipelineruns/$PIPELINE_NAME|$PIPELINE_NAME>) had $num_errors errors across $num_error_components components and $num_warnings warnings across $num_warning_components components"
 
 echo $MESSAGE
+
+echo "sending slack message with file attachment"
+bash ../send-slack-message/send-slack-message.sh -v -c "$SLACK_CHANNEL" -m "$MESSAGE" -f "./ec-results-slack.yaml" 
+
