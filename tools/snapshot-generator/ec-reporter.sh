@@ -40,15 +40,16 @@ bash ./monitor-snapshot.sh "$snapshot_name" "$ec_component_test" "$monitor_snaps
 echo "processing log output"
 
 PIPELINE_NAME=$(cat "$monitor_snapshot_output" | tail -n 1 )
-cat $monitor_snapshot_output | tail -n 2 | head -n 1 
 cat $monitor_snapshot_output | tail -n 2 | head -n 1 > "$ec_results_file"
 
 WEB_URL="https://konflux.apps.stone-prod-p02.hjvn.p1.openshiftapps.com/application-pipeline/workspaces/rhoai/applications/$APPLICATION" 
 
 # create formatted yaml file to send to slack
-cat "$ec_results_file" | jq '[.components[] | select(.violations)] | map({name, containerImage, violations: [.violations[] | {msg} + (.metadata | {description, solution})]}) ' | yq -P > "${HOME}/component-results-slack.yaml"
+echo "creating yaml file for slack"
+cat "$ec_results_file" | jq '[.components[] | select(.violations)] | map({name, containerImage, violations: [.violations[] | {msg} + (.metadata | {description, solution})]}) ' | yq -P > "${HOME}/ec-results-slack.yaml"
 
 # create inital slack message
+echo "parsing results for slack message"
 num_errors=$(cat "$ec_results_file"| jq '[.components[].violations | length] | add')
 num_warnings=$(cat "$ec_results_file" | jq '[.components[].warnings | length] | add')
 num_error_components=$(cat "$ec_results_file" | jq '[.components[] | select(.violations) | .name] | length')
