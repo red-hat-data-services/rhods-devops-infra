@@ -46,7 +46,10 @@ WEB_URL="https://konflux.apps.stone-prod-p02.hjvn.p1.openshiftapps.com/applicati
 
 # create formatted yaml file to send to slack
 echo "creating yaml file for slack"
-cat "$ec_results_file" | jq '[.components[] | select(.violations)] | map({name, containerImage, violations: [.violations[] | {msg} + (.metadata | {description, solution})]}) ' | yq -P > "${HOME}/ec-results-slack.yaml"
+cat "$ec_results_file"
+cat "$ec_results_file" | jq '[.components[] | select(.violations)] | map({name, containerImage, violations: [.violations[] | {msg} + (.metadata | {description, solution})]}) '
+cat "$ec_results_file" | jq '[.components[] | select(.violations)] | map({name, containerImage, violations: [.violations[] | {msg} + (.metadata | {description, solution})]}) ' | yq -P 
+cat "$ec_results_file" | jq '[.components[] | select(.violations)] | map({name, containerImage, violations: [.violations[] | {msg} + (.metadata | {description, solution})]}) ' | yq -P | tee "./ec-results-slack.yaml"
 
 # create inital slack message
 echo "parsing results for slack message"
@@ -57,4 +60,3 @@ num_error_components=$(cat "$ec_results_file" | jq '[.components[] | select(.vio
 MESSAGE="EC validation test $ec_component_test for $APPLICATION (<$WEB_URL/pipelineruns/$PIPELINE_NAME|$PIPELINE_NAME>) had $num_errors errors and $num_warnings warnings across $num_error_components components"
 
 echo $MESSAGE
-
