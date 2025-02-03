@@ -120,7 +120,7 @@ function send_slack_file {
   # log "post response: $post_response"
  
   # final request to map the uploaded file to a channel message 
-  final_payload=$(jq -n --arg C "$CHANNEL" --argjson X "$upload_url_response" '$X | {files:[{id:.file_id}],initial_comment:"asdf", channel_id:$C}')
+  final_payload=$(jq -n --arg C "$CHANNEL" --argjson X "$upload_url_response" '$X | {files:[{id:.file_id}],initial_comment:"", channel_id:$C}')
 
   # attach to an existing message if $thread is defined
   if [ -n "$thread" ]; then
