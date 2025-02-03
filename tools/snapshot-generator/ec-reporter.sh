@@ -12,6 +12,8 @@ set -eo pipefail
 # KUBERNETES_SERVICE_HOST - should be set automatically by k8s
 # KUBERNETES_SERVICE_PORT_HTTPS - should be set automatically by k8s
 
+MODE=$1
+
 source ./ubi9-minimal-install.sh
 
 kubectl config set-credentials snapshot-sa --token=$K8S_SA_TOKEN
@@ -20,22 +22,30 @@ kubectl config set-context snapshot --user=snapshot-sa --cluster=default
 kubectl config use-context snapshot
 
 APPLICATION=$(echo $VERSION | awk -F '.' '{print "rhoai-v" $1 "-" $2 }')
-ec_component_test="$APPLICATION-registry-rhoai-prod-enterprise-contract"
-ec_fbc_test="$APPLICATION-fbc-rhoai-prod-enterprise-contract"
-# generate component snapshot
+# generate snapshots
 # requires RHOAI_QUAY_API_TOKEN env var to be set
 bash ./make-nightly-snapshots.sh "$VERSION"
 
+if [ "$MODE" = fbc ]; then
+  ec_test="$APPLICATION-fbc-rhoai-prod-enterprise-contract"
+  snapshot_folder="nightly-snapshots/snapshot-fbc"
+else
+  ec_test="$APPLICATION-registry-rhoai-prod-enterprise-contract"
+  snapshot_folder="nightly-snapshots/snapshot-components"
+fi
+
+
+
 # apply and mark snapshot so that the EC gets run against it
-kubectl apply -f nightly-snapshots/snapshot-components
-snapshot_name=$(kubectl get -f nightly-snapshots/snapshot-components --no-headers | awk '{print $1}')
-echo kubectl label snapshot "$snapshot_name" "test.appstudio.openshift.io/run=$ec_component_test"
-kubectl label snapshot "$snapshot_name" "test.appstudio.openshift.io/run=$ec_component_test"
+kubectl apply -f $snapshot_folder
+snapshot_name=$(kubectl get -f $snapshot_folder --no-headers | awk '{print $1}')
+echo kubectl label snapshot "$snapshot_name" "test.appstudio.openshift.io/run=$ec_test"
+kubectl label snapshot "$snapshot_name" "test.appstudio.openshift.io/run=$ec_test"
 
 # monitor pipelinerun 
 ec_results_file=./components-results.json 
 monitor_snapshot_output=./monitor-snapshot-output.txt
-bash ./monitor-snapshot.sh "$snapshot_name" "$ec_component_test" "$monitor_snapshot_output" 
+bash ./monitor-snapshot.sh "$snapshot_name" "$ec_test" "$monitor_snapshot_output" 
 
 echo "processing log output"
 
@@ -55,7 +65,8 @@ echo "parsing results for slack message"
 num_errors=$(cat "$ec_results_file"| jq '[.components[].violations | length] | add')
 num_warnings=$(cat "$ec_results_file" | jq '[.components[].warnings | length] | add')
 num_error_components=$(cat "$ec_results_file" | jq '[.components[] | select(.violations) | .name] | length')
+num_warning_components=$(cat "$ec_results_file" | jq '[.components[] | select(.warnings) | .name] | length')
 
-MESSAGE="EC validation test $ec_component_test for $APPLICATION (<$WEB_URL/pipelineruns/$PIPELINE_NAME|$PIPELINE_NAME>) had $num_errors errors and $num_warnings warnings across $num_error_components components"
+MESSAGE="EC validation test $ec_test for $APPLICATION (<$WEB_URL/pipelineruns/$PIPELINE_NAME|$PIPELINE_NAME>) had $num_errors errors across $num_error_components components and $num_warnings warnings across $num_warning_components components"
 
 echo $MESSAGE
