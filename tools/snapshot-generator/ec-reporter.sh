@@ -45,11 +45,10 @@ cat $monitor_snapshot_output | tail -n 2 | head -n 1 > "$ec_results_file"
 WEB_URL="https://konflux.apps.stone-prod-p02.hjvn.p1.openshiftapps.com/application-pipeline/workspaces/rhoai/applications/$APPLICATION" 
 
 # create formatted yaml file to send to slack
-echo "creating yaml file for slack"
-cat "$ec_results_file"
-cat "$ec_results_file" | jq '[.components[] | select(.violations)] | map({name, containerImage, violations: [.violations[] | {msg} + (.metadata | {description, solution})]}) '
-cat "$ec_results_file" | jq '[.components[] | select(.violations)] | map({name, containerImage, violations: [.violations[] | {msg} + (.metadata | {description, solution})]}) ' | yq -P 
-cat "$ec_results_file" | jq '[.components[] | select(.violations)] | map({name, containerImage, violations: [.violations[] | {msg} + (.metadata | {description, solution})]}) ' | yq -P | tee "./ec-results-slack.yaml"
+echo "Selecting violations out of ec results file"
+cat "$ec_results_file" | jq '[.components[] | select(.violations)] | map({name, containerImage, violations: [.violations[] | {msg} + (.metadata | {description, solution})]}) ' | tee "./ec-results-slack.json"
+echo "converting to yaml"
+cat "./ec-results-slack.json" | yq -P | tee "./ec-results-slack.yaml"
 
 # create inital slack message
 echo "parsing results for slack message"
