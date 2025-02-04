@@ -110,3 +110,6 @@ git:
   automerge: 'yes'
   repo-url: https://github.com/red-hat-data-services/ilab-on-ocp.git
   ignore-files: '.tekton/*'
+- name: feast
+  automerge: 'yes'
+  repo-url: https://github.com/red-hat-data-services/feast.git

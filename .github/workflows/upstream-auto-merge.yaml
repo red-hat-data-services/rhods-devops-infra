@@ -43,6 +43,9 @@ on:
           - trustyai-service-operator
           - vllm
           - vllm-gaudi
+          - feast-downstream
+          - feast-upstream
+          - feast-upstream-stable
   workflow_call:
     inputs:
       repositories:

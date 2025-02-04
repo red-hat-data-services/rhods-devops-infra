@@ -263,3 +263,27 @@ git:
   dest:
     url: https://github.com/red-hat-data-services/lm-evaluation-harness.git
     branch: main
+- name: feast-upstream
+  automerge: 'yes'
+  src:
+    url: https://github.com/feast-dev/feast.git
+    branch: master
+  dest:
+    url: https://github.com/opendatahub-io/feast.git
+    branch: master
+- name: feast-upstream-stable
+  automerge: 'yes'
+  src:
+    url: https://github.com/feast-dev/feast.git
+    branch: stable
+  dest:
+    url: https://github.com/opendatahub-io/feast.git
+    branch: stable
+- name: feast-downstream
+  automerge: 'yes'
+  src:
+    url: https://github.com/opendatahub-io/feast.git
+    branch: stable
+  dest:
+    url: https://github.com/red-hat-data-services/feast.git
+    branch: main
