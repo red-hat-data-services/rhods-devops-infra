@@ -75,10 +75,10 @@ class release_processor:
             if entry:
                 parts = entry.split('\t')
                 component_name = parts[0]
-                component_repo = parts[1].split('@')[0]
+                component_repo = parts[1].split('@')[0].strip()
                 if 'fbc' not in component_name:
                     konflux_components[component_repo] = component_name
-        print(konflux_components)
+        # print(konflux_components)
         return konflux_components
 
 
