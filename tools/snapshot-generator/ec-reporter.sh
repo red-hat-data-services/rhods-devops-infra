@@ -44,9 +44,7 @@ for MODE in $MODES; do
   snapshot_name=$(kubectl get -f $snapshot_folder --no-headers | awk '{print $1}')
   echo kubectl label snapshot "$snapshot_name" "test.appstudio.openshift.io/run=$ec_test"
   kubectl label snapshot "$snapshot_name" "test.appstudio.openshift.io/run=$ec_test"
-done
-
-for MODE in $MODES; do
+  
   # monitor pipelinerun 
   ec_results_file=./$MODE-results.json 
   monitor_snapshot_output=./monitor-$MODE-snapshot-output.txt
