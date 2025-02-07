@@ -78,7 +78,7 @@ class release_processor:
                 component_repo = parts[1].split('@')[0]
                 if 'fbc' not in component_name:
                     konflux_components[component_repo] = component_name
-
+        print(konflux_components)
         return konflux_components
 
 
