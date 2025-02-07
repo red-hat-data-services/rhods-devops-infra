@@ -12,6 +12,7 @@ echo waiting for snapshot creation...
 kubectl wait --for create snapshot "$snapshot" --timeout=10m
 
 echo "getting pipelinerun..."
+kubectl get pipelinerun -l "appstudio.openshift.io/snapshot=$snapshot,test.appstudio.openshift.io/scenario=$integration_test"
 pipelinerun=$(kubectl get pipelinerun -l "appstudio.openshift.io/snapshot=$snapshot,test.appstudio.openshift.io/scenario=$integration_test" --no-headers | awk '{print $1}')
 
 echo "waiting for verify task to start..."
