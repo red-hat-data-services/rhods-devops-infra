@@ -69,7 +69,14 @@ for MODE in components fbc; do
   num_error_components=$(cat "$ec_results_file" | jq '[.components[] | select(.violations) | .name] | length')
   num_warning_components=$(cat "$ec_results_file" | jq '[.components[] | select(.warnings) | .name] | length')
 
-  MESSAGE="EC validation test $ec_test for $APPLICATION (<$WEB_URL/pipelineruns/$PIPELINE_NAME|$PIPELINE_NAME>) had $num_errors errors across $num_error_components components and $num_warnings warnings across $num_warning_components components"
+  MESSAGE=cat <<EOF
+*EC Validation Test Results*
+Application: $APPLICATION
+Test Name: $ec_test 
+Pipeline Run: (<$WEB_URL/pipelineruns/$PIPELINE_NAME|$PIPELINE_NAME>)
+Errors: $num_errors errors across $num_error_components components
+Warnings: $num_warnings warnings across $num_warning_components components
+EOF
 
   echo $MESSAGE
 
