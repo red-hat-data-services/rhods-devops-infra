@@ -71,10 +71,10 @@ for MODE in $MODES; do
   num_warning_components=$(cat "$ec_results_file" | jq '[.components[] | select(.warnings) | .name] | length')
 
   MESSAGE=$(cat <<EOF
-*EC Validation Test Results*
+*EC Validation Test Results ($MODE)*
 Application: $APPLICATION
 Test Name: $ec_test 
-Pipeline Run: (<$WEB_URL/pipelineruns/$PIPELINE_NAME|$PIPELINE_NAME>)
+Pipeline Run: <$WEB_URL/pipelineruns/$PIPELINE_NAME|$PIPELINE_NAME>
 Errors: $num_errors errors across $num_error_components components
 Warnings: $num_warnings warnings across $num_warning_components components
 EOF
