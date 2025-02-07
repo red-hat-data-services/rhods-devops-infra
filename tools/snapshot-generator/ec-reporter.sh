@@ -27,8 +27,9 @@ APPLICATION=$(echo $VERSION | awk -F '.' '{print "rhoai-v" $1 "-" $2 }')
 # requires RHOAI_QUAY_API_TOKEN env var to be set
 bash ./make-nightly-snapshots.sh "$VERSION"
 
+MODES="components fbc"
 
-for MODE in components fbc; do
+for MODE in $MODES; do
   MESSAGE=
   if [ "$MODE" = fbc ]; then
     ec_test="$APPLICATION-fbc-rhoai-prod-enterprise-contract"
@@ -43,7 +44,9 @@ for MODE in components fbc; do
   snapshot_name=$(kubectl get -f $snapshot_folder --no-headers | awk '{print $1}')
   echo kubectl label snapshot "$snapshot_name" "test.appstudio.openshift.io/run=$ec_test"
   kubectl label snapshot "$snapshot_name" "test.appstudio.openshift.io/run=$ec_test"
+done
 
+for MODE in $MODES; do
   # monitor pipelinerun 
   ec_results_file=./$MODE-results.json 
   monitor_snapshot_output=./monitor-$MODE-snapshot-output.txt
@@ -69,7 +72,7 @@ for MODE in components fbc; do
   num_error_components=$(cat "$ec_results_file" | jq '[.components[] | select(.violations) | .name] | length')
   num_warning_components=$(cat "$ec_results_file" | jq '[.components[] | select(.warnings) | .name] | length')
 
-  MESSAGE=cat <<EOF
+  MESSAGE=$(cat <<EOF
 *EC Validation Test Results*
 Application: $APPLICATION
 Test Name: $ec_test 
@@ -77,7 +80,7 @@ Pipeline Run: (<$WEB_URL/pipelineruns/$PIPELINE_NAME|$PIPELINE_NAME>)
 Errors: $num_errors errors across $num_error_components components
 Warnings: $num_warnings warnings across $num_warning_components components
 EOF
-
+)
   echo $MESSAGE
 
   echo "sending slack message with file attachment"
