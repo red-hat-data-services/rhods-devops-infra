@@ -287,3 +287,11 @@ git:
   dest:
     url: https://github.com/red-hat-data-services/feast.git
     branch: main
+- name: fms-guardrails-orchestrator
+  automerge: 'yes'
+  src:
+    url: https://github.com/trustyai-explainability/fms-guardrails-orchestrator.git
+    branch: main
+  dest:
+    url: https://github.com/red-hat-data-services/fms-guardrails-orchestrator.git
+    branch: main
