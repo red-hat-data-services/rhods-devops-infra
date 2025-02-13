@@ -1,0 +1,163 @@
+name: Replicate Push Tekton Files for internal konflux
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_branch:
+        description: 'Source branch to copy Tekton files from'
+        required: true
+        default: 'rhoai-x.y'
+      target_branch:
+        description: 'Target branch to copy Tekton files to'
+        required: true
+        default: 'rhoai-x.y'
+      version:
+        description: 'Version to update in Tekton files (e.g., v2.16.0)'
+        required: true
+        default: 'vx.y.z'
+        
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  copy-push-tekton-files:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+    
+      - name: Verify internal-konflux-repos.txt existence
+        run: |
+          echo "Verifying internal-konflux-repos.txt location:"
+          ls -al tools/tekton-replicator
+          cat tools/tekton-replicator/internal-konflux-repos.txt || { echo "Error: internal-konflux-repos.txt not found"; exit 1; }
+
+      - name: Generate github-app token
+        id: app-token
+        uses: getsentry/action-github-app-token@v2
+        with:
+          app_id: ${{ secrets.RHDS_DEVOPS_APP_ID }}
+          private_key: ${{ secrets.RHDS_DEVOPS_APP_PRIVATE_KEY }}
+
+      - name: Fetch and Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git
+
+      - name: Process Repositories
+        run: |
+          set -e  # Exit immediately if a command exits with a non-zero status
+
+          SOURCE_BRANCH=${{ github.event.inputs.source_branch }}
+          TARGET_BRANCH=${{ github.event.inputs.target_branch }}
+          VERSION=${{ github.event.inputs.version }}  # Version input from workflow trigger
+
+          # Extract major, minor, and patch versions from input (e.g., v2.15.0 -> 2 15 0)
+          if [[ "$VERSION" =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            major="${BASH_REMATCH[1]}"
+            minor="${BASH_REMATCH[2]}"
+            patch="${BASH_REMATCH[3]}"
+          else
+            echo "Error: Invalid version format. Expected 'vX.Y.Z'."
+            exit 1
+          fi
+
+          echo "Extracted version: $VERSION for branch $TARGET_BRANCH"
+
+          # Read each repository URL from repos.txt
+          while IFS= read -r repo_url; do
+            if [[ -z "$repo_url" || "$repo_url" =~ ^# ]]; then
+              continue
+            fi
+
+            repo_name=$(basename "$repo_url" .git)
+            echo "Processing repository: $repo_url"
+
+            # Clone the repository
+            git clone "$repo_url"
+            cd "$repo_name" || { echo "Failed to enter directory $repo_name"; exit 1; }
+
+            # Check out the source branch
+            if ! git checkout "$SOURCE_BRANCH"; then
+              echo "Error: Source branch $SOURCE_BRANCH does not exist in $repo_name."
+              cd ..
+              rm -rf "$repo_name"
+              continue
+            fi
+
+            echo "Checked out branch $SOURCE_BRANCH"
+
+            # Ensure Tekton files exist
+            if [ ! -d ".tekton" ]; then
+              echo "Error: Tekton directory does not exist in $SOURCE_BRANCH."
+              cd ..
+              rm -rf "$repo_name"
+              continue
+            fi
+
+            # Create a temporary directory to copy only "push" files
+            mkdir -p ../tekton_copy_$repo_name
+
+            # Find and copy only "push" files (e.g., files containing "push" in their name)
+            for file in .tekton/*push*.yaml; do
+              if [ -f "$file" ]; then
+                file_name=$(basename "$file")
+                new_file_name=$(echo "$file_name" | sed "s/[0-9]\+-[0-9]\+/${major}-${minor}/g" | sed "s/v[0-9]*\.[0-9]*\.[0-9]*/$VERSION/")
+                if [[ "$file_name" != "$new_file_name" ]]; then
+                  mv "$file" "../tekton_copy_$repo_name/$new_file_name"
+                  echo "Renamed file from $file_name to $new_file_name"
+                else
+                  cp "$file" "../tekton_copy_$repo_name/$file_name"
+                  echo "No renaming needed for $file_name"
+                fi
+              fi
+            done
+            
+            # Check out the target branch
+            if ! git checkout "$TARGET_BRANCH"; then
+              echo "Error: Target branch $TARGET_BRANCH does not exist. Creating it."
+              git checkout -b "$TARGET_BRANCH"
+            fi
+
+            echo "Checked out branch $TARGET_BRANCH"
+
+            # Copy the renamed files to the target branch's .tekton directory
+            mkdir -p .tekton
+            cp -r ../tekton_copy_$repo_name/* .tekton/
+
+            # Update version and references in the "push" Tekton files
+            for file in .tekton/*push*.yaml; do
+              if [ -f "$file" ]; then
+                # Replace version references (e.g., v2.13 or v2-13) to match the input version (e.g., v2.15.0)
+                sed -i "s/\bv[0-9]\+\.[0-9]\+\.[0-9]\+\b/$VERSION/g" "$file"
+
+                # Replace version references like rhoai-x.y with rhoai-2.15
+                sed -i "s/\brhoai-[0-9]\+\.[0-9]\+\b/rhoai-${major}.${minor}/g" "$file"
+
+                # Replace vx-y references with the target version (e.g., v2-13 -> v2-15)
+                sed -i "s/\bv[0-9]\+-[0-9]\+\b/v${major}-${minor}/g" "$file"
+              fi
+            done
+
+            # Add and commit changes
+            git add .tekton
+            git config user.name "github-actions"
+            git config user.email "github-actions@users.noreply.github.com"
+
+            if git diff --staged --quiet; then
+              echo "No changes to commit for branch $TARGET_BRANCH."
+            else
+              git commit -m "Sync push Tekton files from $SOURCE_BRANCH to $TARGET_BRANCH with updated versioning"
+              git push https://x-access-token:${{ steps.app-token.outputs.token }}@${repo_url#https://}
+              echo "Pushed changes to branch $TARGET_BRANCH in $repo_name."
+            fi
+
+            # Clean up
+            cd ..
+            rm -rf "$repo_name" "tekton_copy_$repo_name"
+          done < tools/tekton-replicator/internal-konflux-repos.txt
+
+      - name: Cleanup Workflow
+        run: echo "Workflow execution completed."
