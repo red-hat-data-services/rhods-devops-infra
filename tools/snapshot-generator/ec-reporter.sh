@@ -38,7 +38,7 @@ for MODE in $MODES; do
     ec_test="$APPLICATION-registry-rhoai-prod-enterprise-contract"
     snapshot_folder="nightly-snapshots/snapshot-components"
   fi
-
+  ls nightly-snapshots/*
   # apply and mark snapshot so that the EC gets run against it
   kubectl apply -f $snapshot_folder
   snapshot_name=$(kubectl get -f $snapshot_folder --no-headers | awk '{print $1}')
