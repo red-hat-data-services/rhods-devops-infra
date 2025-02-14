@@ -68,10 +68,11 @@ for MODE in $MODES; do
 
   # create formatted yaml file to send to slack
   echo "Selecting violations out of ec results file"
-  cat "$ec_results_file" | jq '[.components[] | select(.violations)] | map({name, containerImage, violations: [.violations[] | {msg} + (.metadata | {description, solution})]}) ' | tee "./$MODE-ec-results-slack.json"
+  cat "$ec_results_file" | jq '[.components[] | select(.violations)] | map({name, containerImage, violations: [.violations[] | {msg} + (.metadata | {code,description, solution})]}) ' | tee "./$MODE-ec-results-slack.json"
   echo "converting to yaml"
   cat "./$MODE-ec-results-slack.json" | yq -P | tee "./$MODE-ec-results-slack.yaml"
-
+  cat "./$MODE-ec-results-slack.json" | jq 'map( .name as $name | .violations | group_by(.code) | (map({ name: $name, code:.[0].code, msgs:[.[].msg] }) ) ) | reduce .[] as $z ([]; . += $z)| reduce .[] as $x ({}; .[$x.code] += [{component: $x.name, error_msgs:$x.msgs}])' | yq -P |  tee "./$MODE-ec-results-slack-2.yaml"
+  
   # create inital slack message
   echo "parsing results for slack message"
   num_errors=$(cat "$ec_results_file"| jq '[.components[].violations | length] | add')
@@ -91,5 +92,5 @@ EOF
   echo $MESSAGE
 
   echo "sending slack message with file attachment"
-  bash ../send-slack-message/send-slack-message.sh -v -c "$SLACK_CHANNEL" -m "$MESSAGE" -f "./$MODE-ec-results-slack.yaml" 
+  bash ../send-slack-message/send-slack-message.sh -v -c "$SLACK_CHANNEL" -m "$MESSAGE"  -f "./$MODE-ec-results-slack-2.yaml" -f "./$MODE-ec-results-slack.yaml"
 done
