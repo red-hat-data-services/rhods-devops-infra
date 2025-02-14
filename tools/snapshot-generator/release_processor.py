@@ -95,6 +95,7 @@ class release_processor:
     def generate_component_snapshot(self):
         snapshot_components = []
         for image in self.expected_rhoai_images:
+            print(f"processing {image}")
             snapshot_component = {}
             image_parts = image.split('@')
             repo_path = image_parts[0]
@@ -109,6 +110,8 @@ class release_processor:
             # signature=True
             if signature:
                 labels = qc.get_git_labels(repo, manifest_digest)
+                print("found labels:")
+                print(labels)
                 labels = {label['key']: label['value'] for label in labels if label['value']}
                 git_url = labels[self.GIT_URL_LABEL_KEY]
                 git_commit = labels[self.GIT_COMMIT_LABEL_KEY]
