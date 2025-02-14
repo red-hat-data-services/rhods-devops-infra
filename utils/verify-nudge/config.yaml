@@ -31,3 +31,5 @@
       onboarded-since: rhoai-2.16
     - name: lmes-pod-image
       onboarded-since: rhoai-2.16
+    - name: guardrails-orchestrator-image 
+      onboarded-since: rhoai-2.18
