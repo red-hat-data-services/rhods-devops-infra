@@ -44,7 +44,7 @@ for MODE in $MODES; do
     ec_test="$APPLICATION-fbc-rhoai-prod-enterprise-contract"
     snapshot_folder="nightly-snapshots/snapshot-fbc"
   else
-    ec_test="$APPLICATION-registry-rhoai-prod-enterprise-contract"
+    ec_test="$APPLICATION-registry-rhoai-stage-enterprise-contract"
     snapshot_folder="nightly-snapshots/snapshot-components"
   fi
   ls nightly-snapshots/*
