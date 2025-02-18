@@ -6,9 +6,9 @@
 # Exit on error
 set -eo pipefail
 
-release_branch=rhoai-2.16
-rhoai_version=2.16.1
-hyphenized_rhoai_version=v2-16
+release_branch=rhoai-2.18
+rhoai_version=2.18.0
+hyphenized_rhoai_version=v2-18
 
 
 RBC_URL=https://github.com/red-hat-data-services/RHOAI-Build-Config
@@ -73,6 +73,7 @@ git init -q
 git remote add origin $RBC_URL
 git config core.sparseCheckout true
 git config core.sparseCheckoutCone false
+mkdir -p .git/info
 echo "config/build-config.yaml" >> .git/info/sparse-checkout
 git fetch -q --depth=1 origin ${release_branch}
 git checkout -q ${release_branch}
@@ -216,6 +217,7 @@ git init -q
 git remote add origin $RBC_URL
 git config core.sparseCheckout true
 git config core.sparseCheckoutCone false
+mkdir -p .git/info
 echo "${V416_CATALOG_YAML_PATH}" >> .git/info/sparse-checkout
 git fetch -q --depth=1 origin ${RBC_RELEASE_BRANCH_COMMIT}
 git checkout -q ${RBC_RELEASE_BRANCH_COMMIT}
