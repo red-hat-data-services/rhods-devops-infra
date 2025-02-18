@@ -6,12 +6,15 @@
 # Exit on error
 set -eo pipefail
 
-release_branch=rhoai-2.17
-rhoai_version=2.17.0
-hyphenized_rhoai_version=v2-17
+release_branch=rhoai-2.18
+rhoai_version=2.18.0
+hyphenized_rhoai_version=v2-18
 
 #image_uri=LATEST_NIGHTLY
-image_uri="quay.io/rhoai/rhoai-fbc-fragment@sha256:bd492cb7ff54cc3457a071d3ce9449babb397c018c2d50212622418301d9cc2e"
+image_uri="http://quay.io/rhoai/rhoai-fbc-fragment:rhoai-2.18@sha256:a032bf4e60d7400c38ea85740f8b447810574459135df5686afdb4830b2ef66f"
+
+# replaces https:// and tag if they are present
+image_uri=$(echo $image_uri | sed -E 's|^https?://||' | sed 's/:.*@/@/')
 
 FBC_QUAY_REPO=quay.io/rhoai/rhoai-fbc-fragment
 RBC_URL=https://github.com/red-hat-data-services/RHOAI-Build-Config
@@ -95,6 +98,7 @@ git init -q
 git remote add origin $RBC_URL
 git config core.sparseCheckout true
 git config core.sparseCheckoutCone false
+mkdir -p .git/info
 echo "config/build-config.yaml" >> .git/info/sparse-checkout
 git fetch -q --depth=1 origin ${release_branch}
 git checkout -q ${release_branch}
