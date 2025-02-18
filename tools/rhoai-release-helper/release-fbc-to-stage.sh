@@ -185,9 +185,13 @@ echo
 echo ">> Artifacts Generated Successfully! All FBC images tag are matching!"
 echo
 
+confirm_message="Please verify that you have done the following:
+- all FBC Fragment pipelines are green
+- all EC tests are green for FBCF stage builds
+Do you want to initiate push to staging? (y/n): "
 
 # After the release artifacts are generated, prompt for confirmation
-read -p "Do you want to initiate push to staging? (y/n): " user_input
+read -p "$confirm_message" user_input
 
 
 if [[ "$user_input" == "y" || "$user_input" == "Y" ]]; then

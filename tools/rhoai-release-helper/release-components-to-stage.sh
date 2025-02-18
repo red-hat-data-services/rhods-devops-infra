@@ -127,8 +127,15 @@ echo
 echo ">> Artifacts Generated Successfully!"
 echo
 
+confirm_message="Please verify that you have done the following:
+- all internal components are green
+- all external components are green
+- all nudges are verified
+- testops has run smoke tests on nightly
+Do you want to initiate push to staging? (y/n): "
+
 # After the release artifacts are generated, prompt for confirmation
-read -p "Do you want to initiate push to staging? (y/n): " user_input
+read -p "$confirm_message"  user_input
 
 
 if [[ "$user_input" == "y" || "$user_input" == "Y" ]]; then
