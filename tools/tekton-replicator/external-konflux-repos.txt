@@ -1,0 +1,7 @@
+https://github.com/red-hat-data-services/fms-guardrails-orchestrator.git
+https://github.com/red-hat-data-services/vllm.git
+https://github.com/red-hat-data-services/lm-evaluation-harness.git
+https://github.com/red-hat-data-services/must-gather.git
+https://github.com/red-hat-data-services/kserve.git
+https://github.com/red-hat-data-services/vllm-gaudi.git
+https://github.com/red-hat-data-services/caikit-nlp.git
