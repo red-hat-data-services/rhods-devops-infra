@@ -179,7 +179,7 @@ jobs:
             # Clean up
             cd ..
             rm -rf "$repo_name" "tekton_copy_$repo_name"
-          done < automation_repo/external-repos.txt
+          done < tools/tekton-replicator/external-konflux-repos.txt
 
       - name: Cleanup Workflow
         run: echo "Workflow execution completed."
