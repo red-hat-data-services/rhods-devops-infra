@@ -1,0 +1,142 @@
+name: Close stuck nudging Renovate Pull Requests
+
+# request for this script: https://issues.redhat.com/browse/RHOAIENG-14372
+# doc: https://miro.com/app/board/uXjVLoVQrHs=/?moveToWidget=3458764614714422012&cot=14
+
+on:
+  # https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule
+  # as per above: Scheduled workflows will only run on the default branch.
+  schedule:
+    - cron:  "0 */12 * * *"
+
+  # to enable manual triggering of the workflow via Github -> Actions
+  workflow_dispatch:
+
+env:
+  GITHUB_REPOS: 'red-hat-data-services/rhods-operator red-hat-data-services/RHOAI-Build-Config'
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: write
+  security-events: write
+  statuses: write
+
+jobs:
+  close-stuck-nudging-renovate-prs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: find and report (Slack) OPEN or CLOSED blocked renovate Pull Requests
+        id: find-blocked-renovate-pull-requests
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          SLACK_WORKFLOW_URL: ${{ secrets.SLACK_WORKFLOW_URL }}
+        run: |
+          #!/usr/bin/env bash
+
+          set -x
+
+          RUN_DATETIME=$(date "+%Y-%m-%d %H:%M:%S")
+
+          send_error_report_to_slack(){
+            echo "script failed, sending error report over Slack"
+            set -x
+            curl -X POST \
+              -H 'Content-type: application/json' \
+              -d '{"run_datetime": "'"$RUN_DATETIME"'", "repo_name": "GitHub Workflow *'"${2}"'* exited with code '"${1}"'. '"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"'"}' \
+              $SLACK_WORKFLOW_URL
+          }
+
+          trap 'EXITCODE=$?; if [ $EXITCODE -ne 0 ]; then send_error_report_to_slack $EXITCODE "$GITHUB_WORKFLOW"; fi; exit $EXITCODE' 1 2 3 6 14 15 EXIT
+
+          set -ueo pipefail # fail on any error or unset variable
+
+          echo "GITHUB_REPOS: ${GITHUB_REPOS[@]}"
+
+          for REPO_NAME in ${GITHUB_REPOS}; do
+            echo -e "\n\n- PROCESSING REPO: $REPO_NAME"
+
+            echo "-- PROCESSING OPEN PULL REQUESTS FOR $REPO_NAME"
+            PRS_OPEN_STUCK="$(gh search prs \
+                        --state=open \
+                        --label=konflux-nudge \
+                        --repo="${REPO_NAME}" \
+                        --match comments "because it does not recognize the last commit author" \
+                        --json "number,title,state,url")"
+
+            echo "query each currently OPEN Pull Request per branch individually to check the Head Branch it was raised from"
+            for pr in $(echo "${PRS_OPEN_STUCK}" | jq '.[] | .number'); do
+              echo -n "PR: $pr | "
+
+              HEAD_REF_NAME=$(gh pr view --repo ${REPO_NAME} $pr --json headRefName --jq '.headRefName')
+              echo -n "HEAD BRANCH: $HEAD_REF_NAME | "
+
+              if [[ "$HEAD_REF_NAME" =~ "konflux/component-updates" ]] ; then
+                echo "checking if the number of 'stuck' PRs on '$HEAD_REF_NAME' equals the number of all PRs on it..."
+
+                PRS_SAME_HEAD="$(gh pr list \
+                                  --state=open \
+                                  --repo="${REPO_NAME}" \
+                                  --head "${HEAD_REF_NAME}" \
+                                  --json 'url' \
+                                  --jq '.[] | .url')"
+
+                PRS_SAME_HEAD_AND_STUCK="$(gh search prs \
+                                          --state=open \
+                                          --label=konflux-nudge \
+                                          --repo="${REPO_NAME}" \
+                                          --head "${HEAD_REF_NAME}" \
+                                          --match comments "because it does not recognize the last commit author" \
+                                          --json "number,title,state,url" \
+                                          --jq '.[] | .url')"
+
+                PRS_SAME_HEAD_COUNT="$(echo $PRS_SAME_HEAD | wc -l)"
+                echo "PRS_SAME_HEAD_COUNT: $PRS_SAME_HEAD_COUNT"
+
+                PRS_SAME_HEAD_AND_STUCK_COUNT="$(echo $PRS_SAME_HEAD_AND_STUCK | wc -l)"
+                echo "PRS_SAME_HEAD_AND_STUCK_COUNT: $PRS_SAME_HEAD_AND_STUCK_COUNT"
+
+                if [ $PRS_SAME_HEAD_AND_STUCK_COUNT -ne $PRS_SAME_HEAD_COUNT ] ; then
+                  echo -e "Can't delete branch '${HEAD_REF_NAME}' due to genuine open Pull Requests exist (may contain stuck PRs too): $PRS_SAME_HEAD"
+                else
+                  echo -e "Deleting branch '${HEAD_REF_NAME}'"
+                  set -x
+                  echo "NOTRUN: gh push origin --delete "${HEAD_REF_NAME}""
+                  set +x
+                fi
+              else
+                echo "branch '${HEAD_REF_NAME}' doesn't match 'konflux/component-updates' - skipping"
+              fi
+            done
+
+            PRS_OPEN_STUCK_CSV="$(echo "$PRS_OPEN_STUCK" | jq -r '.[] | [.number, .title, .state, .url] | @csv')"
+            echo "PRS_OPEN_STUCK_CSV: $PRS_OPEN_STUCK_CSV"
+
+            PRS="$(echo -e "${PRS_OPEN_STUCK_CSV:+$PRS_OPEN_STUCK_CSV\n}")"
+
+            echo -e "\n--- PRS --- \n$PRS \n/--- PRS ---"
+
+            if [ "$PRS" != "" ] ; then
+
+              ### uncomment the below code block to enable reporting every stuck Pull Request to Slack
+              ### it may be good to have it enabled to keep an easy to browse record of these stuck Pull Requests and when they appeared and/or were closed
+
+              echo "Reporting Pull Requests to Slack"
+
+              while read -r line; do
+                echo "processing line/ $line /line"
+                IFS="," read -r -a PR <<<"$line"
+
+                set -x
+                curl -X POST \
+                  -H 'Content-type: application/json' \
+                  -d '{"run_datetime": "'"${RUN_DATETIME}"'", "repo_name": "'"${REPO_NAME}"'", "pr_number":"'"${PR[0]}"'", "pr_title": '"${PR[1]}"', "pr_state": '"${PR[2]}"', "pr_url": '"${PR[3]}"', "msg_post": ""}' \
+                  $SLACK_WORKFLOW_URL
+                set +x
+
+                # sleep to not to hit Slack ratelimiting (e.g.: when you try to send more than 10 msgs within 1 sec window)
+                sleep 0.5
+              done <<<$PRS
+            fi
+
+          done
