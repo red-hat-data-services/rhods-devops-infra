@@ -29,8 +29,8 @@ jobs:
       - name: find and report (Slack) OPEN or CLOSED blocked renovate Pull Requests
         id: find-blocked-renovate-pull-requests
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          SLACK_WORKFLOW_URL: ${{ secrets.SLACK_WORKFLOW_URL }}
+          GH_TOKEN: ${{ github.token}}
+          SLACK_WORKFLOW_URL: ${{ secrets.RHOAI_DEVOPS_SLACK_WEBHOOK }}
         run: |
           #!/usr/bin/env bash
 
