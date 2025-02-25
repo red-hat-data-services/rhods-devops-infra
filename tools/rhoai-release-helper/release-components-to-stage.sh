@@ -10,29 +10,58 @@ release_branch=rhoai-2.18
 rhoai_version=2.18.0
 hyphenized_rhoai_version=v2-18
 
-#image_uri=LATEST_NIGHTLY
-image_uri="http://quay.io/rhoai/rhoai-fbc-fragment:rhoai-2.18@sha256:a032bf4e60d7400c38ea85740f8b447810574459135df5686afdb4830b2ef66f"
+#input_image_uri=LATEST_NIGHTLY
+input_image_uri="http://quay.io/rhoai/rhoai-fbc-fragment:rhoai-2.18@sha256:a032bf4e60d7400c38ea85740f8b447810574459135df5686afdb4830b2ef66f"
 
 # replaces https:// and tag if they are present
-image_uri=$(echo $image_uri | sed -E 's|^https?://||' | sed 's/:.*@/@/')
+input_image_uri=$(echo $input_image_uri | sed -E 's|^https?://||' | sed 's/:.*@/@/')
 
 FBC_QUAY_REPO=quay.io/rhoai/rhoai-fbc-fragment
 RBC_URL=https://github.com/red-hat-data-services/RHOAI-Build-Config
 
 
-if [[ $image_uri == LATEST_NIGHTLY ]]; then image_uri=docker://${FBC_QUAY_REPO}:${release_branch}-nightly; fi
-if [[ "$image_uri" != docker* ]]; then image_uri="docker://${image_uri}"; fi
+if [[ $input_image_uri == LATEST_NIGHTLY ]]; then input_image_uri=docker://${FBC_QUAY_REPO}:${release_branch}-nightly; fi
+if [[ "$input_image_uri" != docker* ]]; then input_image_uri="docker://${input_image_uri}"; fi
 
-META=$(skopeo inspect "${image_uri}" --override-arch amd64 --override-os linux)
-DIGEST=$(echo $META | jq -r .Digest)
-image_uri=${FBC_QUAY_REPO}@${DIGEST}
-RBC_RELEASE_BRANCH_COMMIT=$(echo $META | jq -r '.Labels | ."git.commit"')
+INPUT_META=$(skopeo inspect "${input_image_uri}" --raw)
+
+INPUT_TYPE=$(echo "$INPUT_META" | jq -r '.mediaType') 
+INPUT_DIGEST=$(skopeo manifest-digest <(echo -n $INPUT_META))
+
+image_digest_uri=docker://${FBC_QUAY_REPO}@${INPUT_DIGEST}
+
+# when pulling multi arch image rawm, it has 
+# .mediaType == "application/vnd.oci.image.index.v1+json"
+# and has a .manifests array with notable properties [.digest, .platform.architecture, .platform.os]
+
+if [[ "$INPUT_TYPE" == "application/vnd.oci.image.index.v1+json" ]]; then
+  arches=$(echo "$INPUT_META" | jq -r '.manifests[].platform.architecture')
+  echo "Multi arch detected, with:" $arches
+  
+  digests=$(echo "$INPUT_META" | jq -r '.manifests[].digest') 
+
+  RBC_RELEASE_BRANCH_COMMIT=
+  for digest in $digests; do
+    index_image_uri="$(echo "$image_digest_uri" | sed 's/@sha256.*/@/')$digest"
+    index_image_release_branch_commit=$(skopeo inspect --no-tags "$index_image_uri" | jq -r '.Labels | ."git.commit"')
+    if [ -z "$RBC_RELEASE_BRANCH_COMMIT" ]; then
+      RBC_RELEASE_BRANCH_COMMIT=$index_image_release_branch_commit
+    elif [[ "$RBC_RELEASE_BRANCH_COMMIT" != "$index_image_release_branch_commit" ]]; then
+      echo "Error: Release branch commits are not consistent between arches"
+      exit 1
+    fi
+  done
+  echo "Validated multi arch consistency."
+else
+  META=$(skopeo inspect --no-tags "${image_digest_uri}")
+  RBC_RELEASE_BRANCH_COMMIT=$(echo $META | jq -r '.Labels | ."git.commit"')
+fi 
+
 SHORT_COMMIT=${RBC_RELEASE_BRANCH_COMMIT::8}
 
 echo "RBC_RELEASE_BRANCH_COMMIT = ${RBC_RELEASE_BRANCH_COMMIT}"
-echo "Pushing the components to stage for nightly - ${image_uri}"
+echo "Pushing the components to stage for nightly - ${image_digest_uri}"
 echo "starting to create the artifacts corresponding to the sourcecode at ${RBC_URL}/tree/${RBC_RELEASE_BRANCH_COMMIT}"
-#
 
 
 component_application=rhoai-${hyphenized_rhoai_version}
@@ -155,7 +184,7 @@ if [[ "$user_input" == "y" || "$user_input" == "Y" ]]; then
 
     sleep 10
     echo "All required resources have been successfully created. Release Pipelines have been triggered."
-    echo -en "1. Please watch following pipelinerun until green \n2. Run the FBC push to stage for image ${image_uri}\n"
+    echo -en "1. Please watch following pipelinerun until green \n2. Run the FBC push to stage for image ${image_digest_uri}\n"
     oc get pipelinerun -n rhtap-releng-tenant -l appstudio.openshift.io/snapshot=${component_application}-${epoch}
 
 else
