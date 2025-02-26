@@ -40,10 +40,10 @@ MODES="components fbc"
 for MODE in $MODES; do
   MESSAGE=
   if [ "$MODE" = fbc ]; then
-    conforma_test="conforma-fbc-rhoai-stage-${APPLICATION/rhoai-/}"
+    conforma_test="conforma-fbc-rhoai-prod-${APPLICATION/rhoai-/}"
     snapshot_folder="nightly-snapshots/snapshot-fbc"
   else
-    conforma_test="conforma-registry-rhoai-stage-${APPLICATION/rhoai-/}"
+    conforma_test="conforma-registry-rhoai-prod-${APPLICATION/rhoai-/}"
     snapshot_folder="nightly-snapshots/snapshot-components"
   fi
   ls nightly-snapshots/*
