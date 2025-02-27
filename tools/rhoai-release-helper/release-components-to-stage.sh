@@ -19,6 +19,14 @@ if ! python --version > /dev/null 2>&1; then
   exit 1
 fi
 
+KUBE_CLUSTER=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
+if ! echo "$KUBE_CLUSTER" | grep 'stone-prod-p02'; then
+  echo "kubectl cluster url does not match 'stone-prod-2':"
+  echo "  $KUBE_CLUSTER"
+  echo "Are you sure you are using the correct kubeconfig and/or kubectl context?"
+  exit 1
+fi
+
 FBC_QUAY_REPO=quay.io/rhoai/rhoai-fbc-fragment
 RBC_URL=https://github.com/red-hat-data-services/RHOAI-Build-Config
 
