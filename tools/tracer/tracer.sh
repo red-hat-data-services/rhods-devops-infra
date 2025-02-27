@@ -150,7 +150,7 @@ fi
 
 if [[ -n $IMAGE_URI ]]
 then
-  META=$(skopeo inspect "${IMAGE_URI}")
+  META=$(skopeo inspect --no-tags "${IMAGE_URI}" --override-arch amd64 --override-os linux)
   NAME=$(echo $META | jq -r .Name)
   IFS='/' read -a parts <<< "$NAME"
   CURRENT_COMPONENT="${parts[2]}"
