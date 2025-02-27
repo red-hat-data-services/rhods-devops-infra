@@ -1,6 +1,8 @@
 #!/bin/bash
 
-URI=$(./format-uri-for-skopeo.sh "$1")
+# format-uri-for-skopeo.sh should be in the same dir as this file
+PATH="$PATH:$(dirname $0)"
+URI=$(format-uri-for-skopeo.sh "$1")
 
 echo "Validating properties of $URI..."
 

@@ -6,6 +6,9 @@
 # Exit on error
 set -eo pipefail
 
+# add additional-scripts folder to path
+export PATH="$PATH:$(dirname $0)/additional-scripts"
+
 release_branch=rhoai-2.18
 rhoai_version=2.18.0
 hyphenized_rhoai_version=v2-18
@@ -34,11 +37,11 @@ RBC_URL=https://github.com/red-hat-data-services/RHOAI-Build-Config
 if [[ $input_image_uri == LATEST_NIGHTLY ]]; then 
   input_image_uri=docker://${FBC_QUAY_REPO}:${release_branch}-nightly; 
 else
-  input_image_uri=$(./format-uri-for-skopeo.sh "$input_image_uri")
+  input_image_uri=$(format-uri-for-skopeo.sh "$input_image_uri")
 fi
 
 # this takes care of all multi arch validation
-if ! ./validate-rhoai-fbc-uri.sh "$input_image_uri"; then exit 1; fi
+if ! validate-rhoai-fbc-uri.sh "$input_image_uri"; then exit 1; fi
 
 META=$(skopeo inspect --no-tags "${input_image_uri}" --override-arch amd64 --override-os linux)
 
