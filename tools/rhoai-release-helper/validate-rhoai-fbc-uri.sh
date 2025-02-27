@@ -2,6 +2,8 @@
 
 URI=$(./format-uri-for-skopeo.sh "$1")
 
+echo "Validating properties of $URI..."
+
 META=$(skopeo inspect --no-tags "${URI}" --raw)
 
 # when pulling multi arch image raw, it has 
