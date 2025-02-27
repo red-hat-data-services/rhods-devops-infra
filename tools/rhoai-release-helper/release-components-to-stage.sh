@@ -13,49 +13,28 @@ hyphenized_rhoai_version=v2-18
 #input_image_uri=LATEST_NIGHTLY
 input_image_uri="http://quay.io/rhoai/rhoai-fbc-fragment:rhoai-2.18@sha256:a032bf4e60d7400c38ea85740f8b447810574459135df5686afdb4830b2ef66f"
 
-# replaces https:// and tag if they are present
-input_image_uri=$(echo $input_image_uri | sed -E 's|^https?://||' | sed 's/:.*@/@/')
+
+if ! python --version > /dev/null 2>&1; then 
+  echo "Python binary not found. Did you remember to set up a virtual environment?"
+  exit 1
+fi
 
 FBC_QUAY_REPO=quay.io/rhoai/rhoai-fbc-fragment
 RBC_URL=https://github.com/red-hat-data-services/RHOAI-Build-Config
 
 
-if [[ $input_image_uri == LATEST_NIGHTLY ]]; then input_image_uri=docker://${FBC_QUAY_REPO}:${release_branch}-nightly; fi
-if [[ "$input_image_uri" != docker* ]]; then input_image_uri="docker://${input_image_uri}"; fi
-
-INPUT_META=$(skopeo inspect "${input_image_uri}" --raw)
-
-INPUT_TYPE=$(echo "$INPUT_META" | jq -r '.mediaType') 
-INPUT_DIGEST=$(skopeo manifest-digest <(echo -n $INPUT_META))
-
-image_digest_uri=docker://${FBC_QUAY_REPO}@${INPUT_DIGEST}
-
-# when pulling multi arch image rawm, it has 
-# .mediaType == "application/vnd.oci.image.index.v1+json"
-# and has a .manifests array with notable properties [.digest, .platform.architecture, .platform.os]
-
-if [[ "$INPUT_TYPE" == "application/vnd.oci.image.index.v1+json" ]]; then
-  arches=$(echo "$INPUT_META" | jq -r '.manifests[].platform.architecture')
-  echo "Multi arch detected, with:" $arches
-  
-  digests=$(echo "$INPUT_META" | jq -r '.manifests[].digest') 
-
-  RBC_RELEASE_BRANCH_COMMIT=
-  for digest in $digests; do
-    index_image_uri="$(echo "$image_digest_uri" | sed 's/@sha256.*/@/')$digest"
-    index_image_release_branch_commit=$(skopeo inspect --no-tags "$index_image_uri" | jq -r '.Labels | ."git.commit"')
-    if [ -z "$RBC_RELEASE_BRANCH_COMMIT" ]; then
-      RBC_RELEASE_BRANCH_COMMIT=$index_image_release_branch_commit
-    elif [[ "$RBC_RELEASE_BRANCH_COMMIT" != "$index_image_release_branch_commit" ]]; then
-      echo "Error: Release branch commits are not consistent between arches"
-      exit 1
-    fi
-  done
-  echo "Validated multi arch consistency."
+if [[ $input_image_uri == LATEST_NIGHTLY ]]; then 
+  input_image_uri=docker://${FBC_QUAY_REPO}:${release_branch}-nightly; 
 else
-  META=$(skopeo inspect --no-tags "${image_digest_uri}")
-  RBC_RELEASE_BRANCH_COMMIT=$(echo $META | jq -r '.Labels | ."git.commit"')
-fi 
+  input_image_uri=$(./format-uri-for-skopeo.sh "$input_image_uri")
+fi
+
+# this takes care of all multi arch validation
+if ! ./validate-rhoai-fbc-uri.sh "$input_image_uri"; then exit 1; fi
+
+META=$(skopeo inspect --no-tags "${input_image_uri}" --override-arch amd64 --override-os linux)
+
+RBC_RELEASE_BRANCH_COMMIT=$(echo $META | jq -r '.Labels | ."git.commit"')
 
 SHORT_COMMIT=${RBC_RELEASE_BRANCH_COMMIT::8}
 
