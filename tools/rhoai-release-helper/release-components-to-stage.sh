@@ -7,7 +7,7 @@
 set -eo pipefail
 
 # add additional-scripts folder to path
-export PATH="$PATH:$(dirname $0)/additional-scripts"
+PATH="$PATH:$(dirname $0)/additional-scripts"
 
 release_branch=rhoai-2.18
 rhoai_version=2.18.0
@@ -23,7 +23,7 @@ if ! python --version > /dev/null 2>&1; then
 fi
 
 KUBE_CLUSTER=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
-if ! echo "$KUBE_CLUSTER" | grep 'stone-prod-p02'; then
+if ! echo "$KUBE_CLUSTER" | grep 'stone-prod-p02' > /dev/null; then
   echo "kubectl cluster url does not match 'stone-prod-2':"
   echo "  $KUBE_CLUSTER"
   echo "Are you sure you are using the correct kubeconfig and/or kubectl context?"
@@ -41,7 +41,7 @@ else
 fi
 
 # this takes care of all multi arch validation
-if ! validate-rhoai-fbc-uri.sh "$input_image_uri"; then exit 1; fi
+validate-rhoai-fbc-uri.sh "$input_image_uri"
 
 META=$(skopeo inspect --no-tags "${input_image_uri}" --override-arch amd64 --override-os linux)
 
