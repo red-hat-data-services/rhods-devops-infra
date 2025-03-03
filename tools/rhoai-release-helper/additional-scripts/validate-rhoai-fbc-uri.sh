@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -eo pipefail
 # format-uri-for-skopeo.sh should be in the same dir as this file
 PATH="$PATH:$(dirname $0)"
 URI=$(format-uri-for-skopeo.sh "$1")
@@ -19,7 +19,8 @@ MEDIA_TYPE=$(echo "$META" | jq -r '.mediaType')
 INPUT_DIGEST=$(skopeo manifest-digest <(echo -n "$META"))
 
 # due to format-uri-for-skopeo.sh, $URI is guaranteed to have a tag or a SHA digest, but not both
-BASE_URI=$(echo "$URI" | sed -E 's|docker://(.*)[:@]?.*|\1|')
+BASE_URI=$(echo "$URI" | sed 's|^docker://||' | sed -E 's/^(.*)(:|@sha).*/\1/')
+echo "base URI: $BASE_URI"
 DIGEST_URI=docker://${BASE_URI}@${INPUT_DIGEST}
 
 
