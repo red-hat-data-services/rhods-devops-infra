@@ -15,8 +15,6 @@ set -eo pipefail
 # KUBERNETES_SERVICE_PORT_HTTPS - should be set automatically by k8s
 
 
-source ./ubi9-minimal-install.sh
-
 kubectl config set-credentials snapshot-sa --token=$K8S_SA_TOKEN
 kubectl config set-cluster default --server=https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT_HTTPS --certificate-authority="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 kubectl config set-context snapshot --user=snapshot-sa --cluster=default
