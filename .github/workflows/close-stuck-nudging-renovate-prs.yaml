@@ -7,7 +7,7 @@ on:
   # https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule
   # as per above: Scheduled workflows will only run on the default branch.
   schedule:
-    - cron:  "0 */12 * * *"
+    - cron:  "0 5 * * *"
 
   # to enable manual triggering of the workflow via Github -> Actions
   workflow_dispatch:
@@ -43,7 +43,7 @@ jobs:
             set -x
             curl -X POST \
               -H 'Content-type: application/json' \
-              -d '{"run_datetime": "'"$RUN_DATETIME"'", "repo_name": "GitHub Workflow *'"${2}"'* exited with code '"${1}"'. '"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"'"}' \
+              -d '{"run_datetime": "'"$RUN_DATETIME"'", "pr_title": "GitHub Workflow *'"${2}"'* exited with code '"${1}"'. '"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"'"}' \
               $SLACK_WORKFLOW_URL
           }
 
@@ -130,7 +130,7 @@ jobs:
                 set -x
                 curl -X POST \
                   -H 'Content-type: application/json' \
-                  -d '{"run_datetime": "'"${RUN_DATETIME}"'", "repo_name": "'"${REPO_NAME}"'", "pr_number":"'"${PR[0]}"'", "pr_title": '"${PR[1]}"', "pr_state": '"${PR[2]}"', "pr_url": '"${PR[3]}"', "msg_post": ""}' \
+                  -d '{"run_datetime": "'"${RUN_DATETIME}"'", "msg_pre": "stuck Renovate Pull Requests found", "repo_name": "'"${REPO_NAME}"'", "pr_number":"'"${PR[0]}"'", "pr_title": '"${PR[1]}"', "pr_state": '"${PR[2]}"', "pr_url": '"${PR[3]}"', "msg_post": "this PR should already be closed by the gh workflow but if the same PR appears in Slack notification multiple times it may need to be closed manually"}' \
                   $SLACK_WORKFLOW_URL
                 set +x
 
