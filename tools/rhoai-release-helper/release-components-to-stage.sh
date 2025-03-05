@@ -14,7 +14,7 @@ rhoai_version=2.18.0
 hyphenized_rhoai_version=v2-18
 
 #input_image_uri=LATEST_NIGHTLY
-input_image_uri="http://quay.io/rhoai/rhoai-fbc-fragment:rhoai-2.18@sha256:a032bf4e60d7400c38ea85740f8b447810574459135df5686afdb4830b2ef66f"
+input_image_uri="http://quay.io/rhoai/rhoai-fbc-fragment:rhoai-2.18@sha256:e1f33dd5f4c4a58ea7706a270ddbf522ac6a886bafafb45d82f2268efddb2854"
 
 
 if ! python --version > /dev/null 2>&1; then 

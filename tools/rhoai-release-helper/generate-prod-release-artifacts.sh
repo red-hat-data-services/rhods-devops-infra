@@ -97,7 +97,7 @@ echo "**************************************************************************
 first_ocp_version=$(echo ${ocp_versions_array[0]} | tr -d '\n')
 fbc_application_tag=ocp-${first_ocp_version/v4/4}-${release_branch}
 first_image_uri=docker://${FBC_QUAY_REPO}:${fbc_application_tag}
-META=$(skopeo inspect "${first_image_uri}" --override-arch amd64 --override-os linux)
+META=$(skopeo inspect "${first_image_uri}" --no-tags --override-arch amd64 --override-os linux)
 RBC_RELEASE_BRANCH_COMMIT=$(echo $META | jq -r '.Labels | ."rbc-release-branch.commit"')
 echo
 echo ">> Printing Metadata Info:"
@@ -122,7 +122,7 @@ for ocp_version in "${ocp_versions_array[@]}"; do
   # does the multi-arch checks
   validate-rhoai-fbc-uri.sh "$image_uri"
 
-  META=$(skopeo inspect "${image_uri}" --override-arch amd64 --override-os linux)
+  META=$(skopeo inspect "${image_uri}" --no-tags --override-arch amd64 --override-os linux)
   DIGEST=$(echo $META | jq -r .Digest)
   FULL_IMAGE_URI_WITH_DIGEST="${FBC_QUAY_REPO}@${DIGEST}"
   echo "FBCF-${ocp_version} - ${FULL_IMAGE_URI_WITH_DIGEST}"
