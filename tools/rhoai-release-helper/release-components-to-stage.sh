@@ -6,33 +6,42 @@
 # Exit on error
 set -eo pipefail
 
+# add additional-scripts folder to path
+PATH="$PATH:$(dirname $0)/additional-scripts"
+
+validate-dependencies.sh
+
 release_branch=rhoai-2.18
 rhoai_version=2.18.0
 hyphenized_rhoai_version=v2-18
 
-#image_uri=LATEST_NIGHTLY
-image_uri="http://quay.io/rhoai/rhoai-fbc-fragment:rhoai-2.18@sha256:a032bf4e60d7400c38ea85740f8b447810574459135df5686afdb4830b2ef66f"
+#input_image_uri=LATEST_NIGHTLY
+input_image_uri="http://quay.io/rhoai/rhoai-fbc-fragment:rhoai-2.18@sha256:e1f33dd5f4c4a58ea7706a270ddbf522ac6a886bafafb45d82f2268efddb2854"
 
-# replaces https:// and tag if they are present
-image_uri=$(echo $image_uri | sed -E 's|^https?://||' | sed 's/:.*@/@/')
+
 
 FBC_QUAY_REPO=quay.io/rhoai/rhoai-fbc-fragment
 RBC_URL=https://github.com/red-hat-data-services/RHOAI-Build-Config
 
 
-if [[ $image_uri == LATEST_NIGHTLY ]]; then image_uri=docker://${FBC_QUAY_REPO}:${release_branch}-nightly; fi
-if [[ "$image_uri" != docker* ]]; then image_uri="docker://${image_uri}"; fi
+if [[ $input_image_uri == LATEST_NIGHTLY ]]; then 
+  input_image_uri=docker://${FBC_QUAY_REPO}:${release_branch}-nightly; 
+else
+  input_image_uri=$(format-uri-for-skopeo.sh "$input_image_uri")
+fi
 
-META=$(skopeo inspect "${image_uri}" --override-arch amd64 --override-os linux)
-DIGEST=$(echo $META | jq -r .Digest)
-image_uri=${FBC_QUAY_REPO}@${DIGEST}
+# this takes care of all multi arch validation
+validate-rhoai-fbc-uri.sh "$input_image_uri"
+
+META=$(skopeo inspect --no-tags "${input_image_uri}" --override-arch amd64 --override-os linux)
+
 RBC_RELEASE_BRANCH_COMMIT=$(echo $META | jq -r '.Labels | ."git.commit"')
+
 SHORT_COMMIT=${RBC_RELEASE_BRANCH_COMMIT::8}
 
 echo "RBC_RELEASE_BRANCH_COMMIT = ${RBC_RELEASE_BRANCH_COMMIT}"
-echo "Pushing the components to stage for nightly - ${image_uri}"
+echo "Pushing the components to stage for nightly - ${image_digest_uri}"
 echo "starting to create the artifacts corresponding to the sourcecode at ${RBC_URL}/tree/${RBC_RELEASE_BRANCH_COMMIT}"
-#
 
 
 component_application=rhoai-${hyphenized_rhoai_version}
@@ -155,7 +164,7 @@ if [[ "$user_input" == "y" || "$user_input" == "Y" ]]; then
 
     sleep 10
     echo "All required resources have been successfully created. Release Pipelines have been triggered."
-    echo -en "1. Please watch following pipelinerun until green \n2. Run the FBC push to stage for image ${image_uri}\n"
+    echo -en "1. Please watch following pipelinerun until green \n2. Run the FBC push to stage for image ${image_digest_uri}\n"
     oc get pipelinerun -n rhtap-releng-tenant -l appstudio.openshift.io/snapshot=${component_application}-${epoch}
 
 else

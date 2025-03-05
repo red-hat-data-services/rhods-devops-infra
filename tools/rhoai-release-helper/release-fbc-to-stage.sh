@@ -6,15 +6,17 @@
 # Exit on error
 set -eo pipefail
 
+# add additional-scripts folder to path
+PATH="$PATH:$(dirname $0)/additional-scripts"
+
+validate-dependencies.sh
+
 release_branch=rhoai-2.18
 rhoai_version=2.18.0
 hyphenized_rhoai_version=v2-18
 
-#image_uri=LATEST_NIGHTLY
-image_uri="http://quay.io/rhoai/rhoai-fbc-fragment:rhoai-2.18@sha256:a032bf4e60d7400c38ea85740f8b447810574459135df5686afdb4830b2ef66f"
-
-# replaces https:// and tag if they are present
-image_uri=$(echo $image_uri | sed -E 's|^https?://||' | sed 's/:.*@/@/')
+#input_image_uri=LATEST_NIGHTLY
+input_image_uri="http://quay.io/rhoai/rhoai-fbc-fragment:rhoai-2.18@sha256:e1f33dd5f4c4a58ea7706a270ddbf522ac6a886bafafb45d82f2268efddb2854"
 
 FBC_QUAY_REPO=quay.io/rhoai/rhoai-fbc-fragment
 RBC_URL=https://github.com/red-hat-data-services/RHOAI-Build-Config
@@ -33,10 +35,17 @@ fi
 IFS='.' read -a parts <<< "$rhoai_version"
 micro_version=${parts[2]}
 
-if [[ $image_uri == LATEST_NIGHTLY ]]; then image_uri=docker://${FBC_QUAY_REPO}:${release_branch}-nightly; fi
-if [[ "$image_uri" != docker* ]]; then image_uri="docker://${image_uri}"; fi
+if [[ $input_image_uri == LATEST_NIGHTLY ]]; then 
+  input_image_uri=docker://${FBC_QUAY_REPO}:${release_branch}-nightly; 
+else
+  input_image_uri=$(format-uri-for-skopeo.sh "$input_image_uri")
+fi
 
-META=$(skopeo inspect "${image_uri}")
+# this takes care of all multi arch validation
+validate-rhoai-fbc-uri.sh "$input_image_uri"
+
+META=$(skopeo inspect --no-tags "${input_image_uri}" --override-arch amd64 --override-os linux)
+
 DIGEST=$(echo $META | jq -r .Digest)
 image_uri=${FBC_QUAY_REPO}@${DIGEST}
 RBC_RELEASE_BRANCH_COMMIT=$(echo $META | jq -r '.Labels | ."git.commit"')
@@ -53,8 +62,6 @@ fbc_application_prefix=rhoai-fbc-fragment-ocp-
 RHOAI_QUAY_API_TOKEN=$(cat ~/.ssh/.quay_devops_application_token)
 
 current_dir=$(pwd)
-#workspace=/tmp/tmp.68Vts9xj27
-#epoch=1732618870
 
 workspace=$(mktemp -d)
 echo "workspace=${workspace}"
@@ -128,7 +135,10 @@ for ocp_version in "${ocp_versions_array[@]}"; do
   echo "fbc_application_tag=${fbc_application_tag}"
 
   image_uri=docker://${FBC_QUAY_REPO}:${fbc_application_tag}
-  META=$(skopeo inspect "${image_uri}")
+  # does the multi-arch checks
+  validate-rhoai-fbc-uri.sh "$image_uri"
+
+  META=$(skopeo inspect --no-tags "${image_uri}" --override-arch amd64 --override-os linux)
   DIGEST=$(echo $META | jq -r .Digest)
   FULL_IMAGE_URI_WITH_DIGEST="${FBC_QUAY_REPO}@${DIGEST}"
   echo "FBCF-${ocp_version} - ${FULL_IMAGE_URI_WITH_DIGEST}"
