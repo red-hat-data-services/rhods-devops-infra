@@ -9,7 +9,7 @@ sudo apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-relea
 
 # Add the Kubernetes repository
 sudo mkdir -p /etc/apt/keyrings
-curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.32/deb/Release.key | sudo tee /etc/apt/keyrings/kubernetes-archive-keyring.gpg > /dev/null
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.32/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-archive-keyring.gpg
 sudo chmod 644 /etc/apt/keyrings/kubernetes-archive-keyring.gpg
 
 echo "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.32/deb/ /" \
