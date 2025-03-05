@@ -9,6 +9,8 @@ set -eo pipefail
 # add additional-scripts folder to path
 PATH="$PATH:$(dirname $0)/additional-scripts"
 
+validate-dependencies.sh
+
 release_branch=rhoai-2.18
 rhoai_version=2.18.0
 hyphenized_rhoai_version=v2-18

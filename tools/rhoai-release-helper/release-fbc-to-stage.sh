@@ -9,22 +9,14 @@ set -eo pipefail
 # add additional-scripts folder to path
 PATH="$PATH:$(dirname $0)/additional-scripts"
 
+validate-dependencies.sh
+
 release_branch=rhoai-2.18
 rhoai_version=2.18.0
 hyphenized_rhoai_version=v2-18
 
 #input_image_uri=LATEST_NIGHTLY
 input_image_uri="http://quay.io/rhoai/rhoai-fbc-fragment:rhoai-2.18@sha256:e1f33dd5f4c4a58ea7706a270ddbf522ac6a886bafafb45d82f2268efddb2854"
-
-
-KUBE_CLUSTER=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
-if ! echo "$KUBE_CLUSTER" | grep 'stone-prod-p02' > /dev/null; then
-  echo "kubectl cluster url does not match 'stone-prod-2':"
-  echo "  $KUBE_CLUSTER"
-  echo "Are you sure you are using the correct kubeconfig and/or kubectl context?"
-  exit 1
-fi
-
 
 FBC_QUAY_REPO=quay.io/rhoai/rhoai-fbc-fragment
 RBC_URL=https://github.com/red-hat-data-services/RHOAI-Build-Config
