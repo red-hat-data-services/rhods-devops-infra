@@ -13,10 +13,10 @@ set -eo pipefail
 # SNAPSHOT_TARGET - Either the release branch in "rhoai-x.y" form, OR a full quay URL
 # KUBERNETES_SERVICE_HOST - should be set automatically by k8s
 # KUBERNETES_SERVICE_PORT_HTTPS - should be set automatically by k8s
-
+# KUBERNETES_CA - if running from a pod on the same cluster, can set to /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
 
 kubectl config set-credentials snapshot-sa --token=$K8S_SA_TOKEN
-kubectl config set-cluster default --server=https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT_HTTPS --certificate-authority="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+kubectl config set-cluster default --server=https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT_HTTPS --certificate-authority=<(echo "$KUBERNETES_CA")
 kubectl config set-context snapshot --user=snapshot-sa --cluster=default
 kubectl config use-context snapshot
 
